@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChronoFlow</title>
+    <meta name="description" content="Visualizador y gestor de calendarios estilo Notion con tablero Kanban, duplicación de eventos, estadísticas y resumen con Gemini AI." />
+    <meta property="og:title" content="ChronoFlow" />
+    <meta property="og:description" content="Visualizador y gestor de calendarios estilo Notion con tablero Kanban, duplicación de eventos, estadísticas y resumen con Gemini AI." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      // Ignore benign WebSocket / HMR reconnection errors in preview iframe
+      (function() {
+        function isViteWsError(err) {
+          if (!err) return false;
+          var str = String((err && err.message) || (err && err.stack) || err || '');
+          return str.includes('WebSocket') ||
+                 str.includes('createWebSocketModuleRunnerTransport') ||
+                 str.includes('@vite/client') ||
+                 str.includes('transport') ||
+                 str.includes('Failed to fetch dynamically imported module');
+        }
+
+        window.addEventListener('error', function(event) {
+          if (isViteWsError(event.error) || isViteWsError(event.message)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(event) {
+          if (isViteWsError(event.reason)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+
+        var prevOnError = window.onerror;
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+          if (isViteWsError(msg) || isViteWsError(error) || (url && url.includes('@vite/client'))) {
+            return true;
+          }
+          if (typeof prevOnError === 'function') {
+            return prevOnError.apply(this, arguments);
+          }
+        };
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

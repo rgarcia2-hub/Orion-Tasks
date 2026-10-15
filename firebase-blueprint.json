@@ -1,0 +1,53 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "AppTask": {
+      "title": "AppTask",
+      "description": "A task in the user's board or list",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 300 },
+        "description": { "type": "string", "maxLength": 5000 },
+        "status": { "type": "string", "enum": ["pending", "in_progress", "completed"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "calendarId": { "type": "string", "maxLength": 150 },
+        "calendarName": { "type": "string", "maxLength": 150 },
+        "calendarColor": { "type": "string", "maxLength": 50 },
+        "sourceEventId": { "type": "string", "maxLength": 200 },
+        "googleTaskId": { "type": "string", "maxLength": 200 },
+        "googleTaskListId": { "type": "string", "maxLength": 200 },
+        "startDateTime": { "type": "string", "maxLength": 100 },
+        "endDateTime": { "type": "string", "maxLength": 100 },
+        "isAllDay": { "type": "boolean" },
+        "notes": { "type": "string", "maxLength": 5000 },
+        "createdAt": { "type": "string", "maxLength": 100 },
+        "completedAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["id", "userId", "title", "status", "priority", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile data"
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": "AppTask",
+      "description": "User tasks stored in Firestore"
+    }
+  }
+}

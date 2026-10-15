@@ -1,0 +1,6 @@
+{
+  "name": "ChronoFlow",
+  "description": "Visualizador y gestor de calendarios estilo Notion con tablero Kanban, duplicación de eventos, estadísticas y resumen con Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
