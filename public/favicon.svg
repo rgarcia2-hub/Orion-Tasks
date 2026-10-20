@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="orion-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="50%" stop-color="#2e1065" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="orion-line" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8" />
+      <stop offset="50%" stop-color="#c084fc" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="orion-star" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#a5b4fc" />
+    </linearGradient>
+  </defs>
+
+  <!-- Squircle rounded background -->
+  <rect width="32" height="32" rx="8" fill="url(#orion-bg)" />
+  <rect x="0.5" y="0.5" width="31" height="31" rx="7.5" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1" />
+
+  <!-- Constellation geometric lines -->
+  <g stroke="url(#orion-line)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" opacity="0.95">
+    <path d="M9 8.5 L13 15 L9 23.5" fill="none" />
+    <path d="M23 8.5 L19 17 L23 23.5" fill="none" />
+    <path d="M9 8.5 L23 8.5" fill="none" opacity="0.45" stroke-dasharray="1.5 1.5" />
+    <path d="M9 23.5 L23 23.5" fill="none" opacity="0.45" stroke-dasharray="1.5 1.5" />
+    <!-- Belt line -->
+    <path d="M13 15 L16 16 L19 17" fill="none" stroke="#ffffff" stroke-width="1.8" opacity="0.95" />
+  </g>
+
+  <!-- Stars of Orion -->
+  <circle cx="9" cy="8.5" r="1.6" fill="#f43f5e" />
+  <circle cx="23" cy="8.5" r="1.5" fill="#67e8f9" />
+  <circle cx="9" cy="23.5" r="1.5" fill="#a5b4fc" />
+  <circle cx="23" cy="23.5" r="1.7" fill="#38bdf8" />
+
+  <!-- 3 Belt Stars -->
+  <circle cx="13" cy="15" r="1.7" fill="url(#orion-star)" />
+  <circle cx="16" cy="16" r="2.0" fill="#ffffff" />
+  <circle cx="19" cy="17" r="1.7" fill="url(#orion-star)" />
+
+  <!-- Nebula core -->
+  <circle cx="16" cy="19.5" r="1.2" fill="#c084fc" opacity="0.85" />
+</svg>

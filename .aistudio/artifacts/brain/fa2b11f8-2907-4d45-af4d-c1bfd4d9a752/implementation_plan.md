@@ -1,159 +1,111 @@
-# ChronoFlow — Notion-Style Google Calendar & Task Workspace
+# Orion Mail · Cliente de Correo Híbrido de 3 Columnas
 
-Una aplicación de productividad inspirada en Notion que conecta con Google Calendar para explorar calendarios, inspeccionar eventos al detalle, duplicarlos en un calendario interno con estados de flujo de trabajo (Tablero Kanban y Lista: Pendiente, En curso, Hecho), dashboard de inicio con métricas y el próximo evento, y un asistente inteligente con Gemini AI para sintetizar reuniones y extraer tareas de acción.
+Orion Mail es el cliente de correo electrónico de alta productividad para el ecosistema Orion Workspace, diseñado con una arquitectura de 3 columnas inspirada en Proton Mail y Notion, permitiendo gestionar mensajes tanto de tu cuenta real de Gmail como de un buzón interno seguro almacenado en Cloud Firestore.
 
-## Decisiones Críticas y Respuestas Confirmadas
+## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> Se han incorporado las elecciones directas del usuario para definir la experiencia visual y funcional:
-
-- **Flujo de trabajo para eventos duplicados**: Tablero Kanban interactivo (drag-and-drop o botones de cambio ágil) y vista de lista tabular estructurada con estados: `Pendiente`, `En curso` y `Hecho`.
-- **Funcionalidades adicionales**: Asistente de inteligencia artificial con Gemini 3.8 Flash para generar resúmenes ejecutivos de reuniones, checklists de preparación y extracción automática de tareas accionables a partir de la descripción y notas del evento.
-- **Identidad visual y diseño**: Estilo Notion, sobrio, limpio y minimalista, con paleta neutra y descansada, tipografía clara con números tabulares (`tabular-nums`), bordes sutiles de 1px sin tarjetas recargadas y sin píldoras de colores estridentes.
-
----
-
-## 1. Visión General y Concepto Central
-
-- **Qué hace**: Permite iniciar sesión de forma segura con Google Workspace para acceder a todos los calendarios del usuario (personales, laborales, secundarios). El usuario puede seleccionar cualquier calendario, examinar sus eventos con información completa (horarios, ubicación, asistentes, enlaces a Google Meet), "clonar/duplicar" eventos al calendario de gestión interna de la aplicación, organizar esos eventos mediante un tablero Kanban por estados, y monitorear el progreso diario desde una pestaña de inicio con cuenta atrás para el próximo evento y métricas de cumplimiento.
-- **Público objetivo**: Profesionales, estudiantes y organizadores que necesitan transformar compromisos de calendario en flujos de trabajo accionables sin saturar su calendario original.
-- **Valor diferencial**: Conexión directa con Google Calendar sin intermediarios, enriquecida con análisis inteligente de reuniones vía Gemini y persistencia local inmediata.
+> Decisiones de producto confirmadas mediante entrevista interactiva:
+> - **Modo de conexión híbrido**: Soporte dual que permite alternar o visualizar conjuntamente correos reales de Gmail (mediante la integración oficial de Google OAuth ya configurada en tu proyecto) y correos/borradores internos de Orion sincronizados en Firestore.
+> - **Diseño de 3 columnas**: Navegación lateral (Carpetas, etiquetas y selector de cuentas), lista central de hilos con vista previa rápida y búsqueda instantánea, y panel derecho de lectura y composición de correos.
+> - **Independencia funcional**: Mantenido como cliente de correo especializado y autónomo, accesible directamente desde el Hub y mediante su subURL dedicada `/mail`.
 
 ---
 
-## 2. Experiencia de Usuario y Diseño Visual
+## 1. Overview & Core Concept
 
-### Flujos Clave de Usuario
-1. **Conexión con Google**: El usuario pulsa el botón oficial de inicio de sesión con Google para autorizar la lectura de sus calendarios.
-2. **Pestaña Inicio (Dashboard)**:
-   - Tarjeta destacada con el **Próximo evento más cercano** (tiempo restante, hora exacta, título, calendario de origen y acceso rápido).
-   - Panel de **Estadísticas de Productividad**: Eventos totales clonados, tasa de completados (%) con gráfico circular o barra de progreso minimalista, desglose por estado (Pendiente, En curso, Hecho) y tiempo medio estimado.
-   - **Lista de Tareas Pendientes Urgentes**: Lista rápida de eventos en estado "Pendiente" con checkbox de completado rápido en 1 clic.
-3. **Pestaña Explorador de Calendarios (Google Calendar)**:
-   - Selector lateral o desplegable limpio con todos los calendarios disponibles del usuario (con su color original de Google).
-   - Lista cronológica de eventos (hoy, esta semana, próximos 30 días) con buscador instantáneo y filtros de fecha.
-   - **Cajón / Modal de Detalles**: Al hacer clic en un evento, se despliega el resumen completo: hora de inicio/fin, ubicación, enlace a Meet/videollamada, organizador, asistentes con confirmación y descripción completa.
-   - **Botón "Duplicar en App"**: Clona el evento al gestor interno con un clic, permitiendo opcionalmente añadir notas iniciales, tags o prioridad.
-4. **Pestaña Tareas y Calendario App (Kanban & Lista)**:
-   - Vista dividida o conmutable: **Tablero Kanban** (columnas: *Pendiente*, *En curso*, *Hecho*) y **Vista de Lista** compacta.
-   - Acciones de cambio de estado fluidas, añadir checklist interno a cada evento y notas enriquecidas.
-   - Botón **"Resumen con IA"**: Invoca al modelo Gemini para sintetizar los detalles de la reunión y sugerir tareas de seguimiento en segundos.
-5. **Pestaña Calendario Visual de la App**:
-   - Vista de mes/semana interactiva con los eventos duplicados y su estado visualmente diferenciado.
-
-### Identidad Visual y Estilo Notion
-- **Dirección estética**: Minimalismo editorial tipo Notion. Fondo blanco sereno en modo claro (`#ffffff` / `#f7f7f5`) y carbón profundo en modo oscuro (`#191919` / `#202020`).
-- **Paleta de color y contraste**:
-  - Lienzo (60%): `#ffffff` (claro) / `#191919` (oscuro).
-  - Superficies y separadores (30%): Líneas ultrafinas de 1px (`#e9e9e7` / `#2e2e2e`), fondos de fila suaves al hover (`#f1f1ef` / `#252525`).
-  - Acentos discretos (10%): Monocromo equilibrado con toques sutiles de ámbar y esmeralda únicamente para indicar estados funcionales (Pendiente: pizarra neutro, En curso: azul suave, Hecho: esmeralda discreto).
-- **Tipografía y jerarquía**:
-  - Tipografía sans-serif refinada (`Plus Jakarta Sans` / sistema nativo de alta legibilidad).
-  - Figuras tabulares (`tabular-nums`) para todas las fechas, contadores horarios y porcentajes.
-  - Cero píldoras decorativas: etiquetas y metadatos con separadores limpios tipo `·` o texto plano tipográfico.
+- **Qué hace**: Proporciona un entorno unificado para consultar bandejas de entrada (*Recibidos*, *Enviados*, *Destacados*, *Borradores*, *Papelera*), redactar nuevos correos con formato enriquecido, responder hilos, buscar mensajes por remitente o asunto, y alternar fluidamente entre la cuenta de Gmail conectada y el buzón interno de Orion.
+- **Público objetivo**: Usuarios de Orion Workspace que buscan una experiencia de correo sin distracciones, ultrarrápida, con atajos de teclado y estética visual cuidada.
+- **Valor diferencial**: Convivencia transparente entre correos de Gmail y correos internos del equipo o notas enviadas a uno mismo, sin salir del ecosistema Orion.
 
 ---
 
-## 3. Decisiones de Producto y Arquitectura
+## 2. User Experience & Visual Design
 
-- **Autenticación con Google Workspace**:
-  - *Enfoque*: Google OAuth 2.0 en cliente (Firebase Auth + GoogleAuthProvider) con scopes mínimos necesarios (`calendar.calendarlist.readonly` y `calendar.events.readonly`).
-  - *Por qué*: Acceso seguro y oficial directo a las APIs de Google sin requerir redirecciones complejas de backend que puedan fallar en entornos sandbox.
-- **Gestión de Datos y Persistencia de la App**:
-  - *Enfoque*: Almacenamiento local reactivo (`localStorage`) con soporte para exportar/importar JSON. Los eventos clonados se guardan de forma persistente en el navegador del usuario y pueden enriquecerse con notas, sub-tareas y estados sin alterar el calendario original de Google.
-  - *Por qué*: Privacidad total para el usuario, cero latencia y funcionamiento offline para las tareas ya sincronizadas.
-- **Integración con Gemini AI**:
-  - *Enfoque*: Endpoint server-side `/api/gemini/summarize` que utiliza el SDK oficial `@google/genai` con el modelo `gemini-3.8-flash` y esquema JSON estructurado para devolver: resumen en 2 frases, puntos clave discutidos y tareas de acción sugeridas.
-  - *Por qué*: Rápido, estructurado y sin exponer la API key en el cliente.
+### A. Estructura de 3 Columnas (Layout Grid)
+1. **Columna 1: Navegación & Carpetas (240px - 260px)**
+   - Selector de cuenta activa (Gmail conectada vs. Buzón Interno Orion vs. "Todas las bandejas").
+   - Botón primario prominente `+ Redactar`.
+   - Carpetas principales: Recibidos (*Inbox* con contador numérico tabular), Destacados (*Starred*), Enviados (*Sent*), Borradores (*Drafts*), Papelera (*Trash*).
+   - Etiquetas personalizadas con indicadores de color sutiles.
+   - Acceso al Hub y conmutador rápido de apps en la cabecera.
+
+2. **Columna 2: Lista de Hilos y Mensajes (320px - 380px)**
+   - Barra superior con buscador en tiempo real (`filter por asunto, remitente o cuerpo`).
+   - Filtros de estado rápidos: "Todos", "No leídos", "Con adjuntos".
+   - Tarjetas de hilos con avatar de remitente, asunto destacado, extracto de 2 líneas, fecha en formato tabular `tabular-nums` y selector de estrella de favorito.
+   - Indicador visual claro de mensaje seleccionado y estado leído/no leído.
+
+3. **Columna 3: Panel de Lectura & Redacción (Área flexible principal)**
+   - **Vista de Lectura**: Cabecera con datos del remitente, avatares, fecha exacta, botones de acción rápida (*Responder*, *Reenviar*, *Marcar como no leído*, *Eliminar*, *Destacar*).
+   - Cuerpo del mensaje con renderizado seguro de texto y HTML limpio.
+   - **Compositor Integrado / Modal Deslizable**: Redactor con campos *Para*, *Asunto*, barra de formato enriquecido, adjuntos y botón de envío inmediato.
+
+### B. Identidad Visual y Tema
+- **Paleta Celestial Orion**: Tonos profundos en modo oscuro (`#121212`, `#191919`, bordes `#262626`, acentos violeta/índigo estelar) y fondos limpios y contrastados en modo claro (`#ffffff`, `#f8f9fa`, acentos índigo y pizarra).
+- **Tipografía**: `Plus Jakarta Sans` con jerarquía de pesos marcada y cifras tabulares (`tabular-nums`) en todas las horas y contadores.
+- **Micro-interacciones**: Transiciones suaves al cambiar de hilo mediante `motion`, feedback al archivar o destacar con iconos animados de `lucide-react`.
 
 ---
 
-## 4. Arquitectura Técnica y Estrategia de Datos
+## 3. Key Product Decisions & Trade-Offs
 
-### Diagrama de Arquitectura de Componentes
+- **Decisión 1: Sincronización híbrida (Gmail API + Firestore)**
+  - *Enfoque*: Cuando el usuario ha iniciado sesión con Google y tiene el token activo, Orion Mail consulta la API oficial de Gmail (`messages.list` y `messages.get`). Para mensajes redactados internamente o cuando no hay conexión externa, almacena los datos en Firestore bajo la colección `users/{userId}/emails`.
+  - *Por qué*: Ofrece lo mejor de los dos mundos: permite ver tus correos reales del día a día y al mismo tiempo crear y gestionar correos internos sin fallos de cuota o cuando se trabaja desconectado.
+  - *Alternativas descartadas*: Depender exclusivamente de Gmail (requiere re-autenticación constante) o solo buzón falso (pierde utilidad real).
+
+- **Decisión 2: SubURL dedicada `/mail` y navegación sincronizada**
+  - *Enfoque*: Registro de la ruta `/mail` en el router de `CalendarContext`, tarjeta dedicada en `OrionWorkspaceHub` con estado funcional y soporte para historial del navegador (`popstate`).
+  - *Por qué*: Consistencia total con `/tasks` y `/calendar`.
+
+---
+
+## 4. Technical Architecture & Data Strategy
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        App Navigation & Top Bar                        │
-│  [ChronoFlow Notion Wordmark]   [Inicio | Calendarios | Tareas | Ajustes]  │
+│                          ORION WORKSPACE HUB                           │
+│                 (/tasks  ·  /calendar  ·  /mail)                       │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │
-           ┌────────────────────────┼─────────────────────────┐
-           ▼                        ▼                         ▼
-┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐
-│    Pestaña Inicio   │  │  Explorador Google  │  │  Espacio de Tareas  │
-│                     │  │      Calendar       │  │    y Flujo App      │
-│ ┌─────────────────┐ │  │ ┌─────────────────┐ │  │ ┌─────────────────┐ │
-│ │ Próximo Evento  │ │  │ │ Selector Agenda │ │  │ │ Tablero Kanban  │ │
-│ │  con Cuenta     │ │  │ │ (Calendarios)   │ │  │ │ Pendiente/Curso/│ │
-│ │  Regresiva      │ │  │ └────────┬────────┘ │  │ │ Hecho           │ │
-│ └─────────────────┘ │  │          │          │  │ └─────────────────┘ │
-│ ┌─────────────────┐ │  │ ┌────────▼────────┐ │  │ ┌─────────────────┐ │
-│ │ Estadísticas y  │ │  │ │ Lista de Eventos│ │  │ │ Vista de Lista  │ │
-│ │ Tasa Completados│ │  │ │ con Filtros/Día │ │  │ │ & Filtro Rápido │ │
-│ └─────────────────┘ │  │ └────────┬────────┘ │  │ └─────────────────┘ │
-│ ┌─────────────────┐ │  │          │          │  │ ┌─────────────────┐ │
-│ │ Pendientes Top  │ │  │ ┌────────▼────────┐ │  │ │ Asistente IA   │ │
-│ │ con Checkbox    │ │  │ │ Modal Detalle & │ │  │ │ (Resumen Gemini)│ │
-│ └─────────────────┘ │  │ │ "Duplicar a App"│ │  │ └─────────────────┘ │
-│                     │  │ └─────────────────┘ │  │                     │
-└─────────────────────┘  └─────────────────────┘  └─────────────────────┘
-           │                        │                         │
-           └────────────────────────┼─────────────────────────┘
-                                    │
-                    ┌───────────────▼───────────────┐
-                    │      Estado Centralizado      │
-                    │   - authStore (Google Token)  │
-                    │   - calendarStore (G-Events)  │
-                    │   - appTasksStore (Duplicados)│
-                    │   - localStorage Persistencia │
-                    └───────────────┬───────────────┘
-                                    │
-             ┌──────────────────────┴──────────────────────┐
-             ▼                                             ▼
-  ┌──────────────────────┐                      ┌──────────────────────┐
-  │ Google Calendar API  │                      │ Server Express Route │
-  │ (Google Cloud OAuth) │                      │ /api/gemini/summarize│
-  └──────────────────────┘                      └──────────────────────┘
+                       Ruta activa: /mail
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                        ORION MAIL CONTAINER                            │
+├────────────────────┬────────────────────────────┬──────────────────────┤
+│  Columna 1 (Nav)   │   Columna 2 (Thread List)  │  Columna 3 (Reader)  │
+│  - Cuentas         │   - Buscador en vivo       │  - Asunto & Remitente│
+│  - Botón Redactar  │   - Filtro Leídos/No leídos│  - Acciones (Reply)  │
+│  - Carpetas        │   - Hilos con avatares     │  - Contenido & HTML  │
+│  - Etiquetas       │   - Badges tabulares       │  - Compositor nuevo  │
+└─────────┬──────────┴──────────────┬─────────────┴──────────┬───────────┘
+          │                         │                        │
+          ▼                         ▼                        ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                     MAIL SERVICE & PERSISTENCIA                        │
+├─────────────────────────────────────┬──────────────────────────────────┤
+│  Google Gmail API (OAuth Scopes)    │   Cloud Firestore Persistence    │
+│  - Fetch real threads & messages    │   - users/{uid}/emails           │
+│  - Mark as read / Starred           │   - Drafts, sent, custom tags    │
+│  - Send via Gmail endpoint          │   - Real-time snapshot listeners │
+└─────────────────────────────────────┴──────────────────────────────────┘
 ```
 
-### Modelo de Datos de Eventos Duplicados
-
+### Entidades de Datos (TypeScript)
 ```typescript
-export type TaskStatus = 'pending' | 'in_progress' | 'completed';
-
-export interface AppTaskEvent {
-  id: string; // UUID local
-  googleEventId?: string; // Referencia al evento original
-  calendarId: string;
-  calendarName: string;
-  calendarColor?: string;
-  title: string;
-  description: string;
-  location?: string;
-  meetLink?: string;
-  startDateTime: string;
-  endDateTime: string;
-  isAllDay: boolean;
-  status: TaskStatus;
-  priority: 'low' | 'medium' | 'high';
-  notes: string;
-  subtasks: { id: string; title: string; completed: boolean }[];
-  aiSummary?: {
-    summary: string;
-    actionItems: string[];
-    preparationNotes: string[];
-  };
-  createdAt: string;
-  completedAt?: string;
+interface OrionEmail {
+  id: string;
+  source: 'gmail' | 'internal';
+  from: { name: string; email: string; avatarUrl?: string };
+  to: string[];
+  subject: string;
+  preview: string;
+  body: string;
+  date: string; // ISO
+  folder: 'inbox' | 'sent' | 'drafts' | 'trash' | 'starred';
+  isRead: boolean;
+  isStarred: boolean;
+  labels?: string[];
 }
 ```
-
-### Plan de Fases de Construcción
-1. **Fase 1: Configuración de OAuth y Entorno**: Invocar `set_up_oauth` para registrar los permisos de Google Calendar con la autorización del usuario y configurar el proxy server Express para Gemini.
-2. **Fase 2: Conector Google Calendar**: Cliente API para consultar calendarios (`users/me/calendarList`) y eventos con rango temporal y paginación.
-3. **Fase 3: Pestaña de Inicio (Dashboard)**: Cálculo de métricas dinámicas (porcentaje de completados, eventos pendientes), contador regresivo al próximo evento y lista interactiva de tareas.
-4. **Fase 4: Explorador de Calendarios y Modal de Evento**: Interfaz para cambiar de calendario, ver detalles completos (asistentes, videollamadas, descripciones) y botón de duplicación al sistema interno.
-5. **Fase 5: Tablero Kanban y Lista de Flujo**: Columnas por estado con arrastrar/cambiar estado, sub-tareas y editor de notas.
-6. **Fase 6: Asistente Gemini AI**: Integración para resumir el evento y extraer elementos de acción directamente en la tarea.
-7. **Fase 7: Verificación y Acabados de Estilo Notion**: Verificación de compilación sin errores, accesibilidad, atajos de teclado y pulido de microinteracciones.

@@ -276,3 +276,46 @@ export function isEventExpired(
   return date.getTime() < now.getTime();
 }
 
+/**
+ * Returns the 7 days of the week (Monday through Sunday) containing the given date.
+ */
+export function getWeekDays(referenceDate: Date): Date[] {
+  const date = new Date(referenceDate);
+  const dayOfWeek = date.getDay(); // 0 is Sunday, 1 is Monday...
+  // Convert so Monday is 0 and Sunday is 6
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(date);
+  monday.setDate(date.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+
+  const days: Date[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    days.push(d);
+  }
+  return days;
+}
+
+export function isSameDay(d1: Date | string, d2: Date | string): boolean {
+  try {
+    const date1 = typeof d1 === 'string' ? new Date(d1) : d1;
+    const date2 = typeof d2 === 'string' ? new Date(d2) : d2;
+    return (
+      date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate()
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function formatDateKey(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+

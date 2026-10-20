@@ -72,4 +72,21 @@ export interface AppTask {
   aiAnalysis?: AISummaryResult;
   createdAt: string;
   completedAt?: string;
+  googleTaskId?: string;
+  googleTaskListId?: string;
 }
+
+export interface AppNote {
+  id: string;
+  userId?: string;
+  title: string;
+  content: string;
+  tags: string[];
+  color?: string;
+  isPinned?: boolean;
+  linkedTaskId?: string;
+  linkedEventId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+

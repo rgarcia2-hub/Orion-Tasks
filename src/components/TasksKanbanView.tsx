@@ -17,6 +17,12 @@ import {
   Calendar as CalendarIcon,
   Filter,
   Zap,
+  Cloud,
+  RefreshCw,
+  Plus,
+  Check,
+  GripVertical,
+  FileText,
 } from 'lucide-react';
 
 export const TasksKanbanView: React.FC = () => {
@@ -29,12 +35,40 @@ export const TasksKanbanView: React.FC = () => {
     historicalCompletedCount,
     isTaskExpired,
     purgeExpiredTasks,
+    user,
+    isCloudSynced,
+    googleToken,
+    googleTaskLists,
+    activeGoogleTaskListId,
+    setActiveGoogleTaskListId,
+    syncGoogleTasks,
+    isSyncingGoogleTasks,
+    createTaskInGoogleTasks,
+    loginWithGoogle,
+    getNotesForTask,
+    setActiveTab,
   } = useCalendar();
 
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<'all' | TaskPriority>('all');
   const [calendarFilter, setCalendarFilter] = useState<string>('all');
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [quickTitle, setQuickTitle] = useState('');
+  const [quickNotes, setQuickNotes] = useState('');
+  const [isCreatingQuick, setIsCreatingQuick] = useState(false);
+
+  // Smooth Drag & Drop states
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [dragOverColId, setDragOverColId] = useState<TaskStatus | null>(null);
+
+  const handleDropOnColumn = (targetCol: TaskStatus) => {
+    if (draggedTaskId) {
+      updateTaskStatus(draggedTaskId, targetCol);
+    }
+    setDraggedTaskId(null);
+    setDragOverColId(null);
+  };
 
   const filteredTasks = tasks.filter((task) => {
     // Si la fecha del evento ha vencido, se excluye del Kanban y de la Lista de tareas
@@ -156,6 +190,134 @@ export const TasksKanbanView: React.FC = () => {
         </div>
       </div>
 
+      {/* Google Tasks & Cloud Sync Controls */}
+      <div className="bg-white dark:bg-[#202020] rounded-xl border border-[#e9e9e7] dark:border-[#2e2e2e] p-3.5 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              GT
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
+                  Google Tasks Integration
+                </span>
+                {isCloudSynced && user && (
+                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                    <Cloud className="w-3 h-3" />
+                    <span>Guardado en {user.email?.split('@')[0]}</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-neutral-400">
+                Sincroniza tus listas y tareas con tu cuenta de Google.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {googleToken ? (
+              <>
+                {googleTaskLists.length > 0 && (
+                  <select
+                    value={activeGoogleTaskListId || ''}
+                    onChange={(e) => setActiveGoogleTaskListId(e.target.value)}
+                    className="px-2.5 py-1 text-xs bg-[#f4f4f2] dark:bg-[#2a2a2a] text-neutral-700 dark:text-neutral-300 rounded-lg border-0 focus:outline-hidden cursor-pointer"
+                  >
+                    {googleTaskLists.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                <button
+                  onClick={() => syncGoogleTasks()}
+                  disabled={isSyncingGoogleTasks}
+                  className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium bg-[#f4f4f2] dark:bg-[#2a2a2a] hover:bg-[#eaeae8] dark:hover:bg-[#333333] text-neutral-800 dark:text-neutral-200 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  title="Importar tareas desde Google Tasks a Orion"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isSyncingGoogleTasks ? 'animate-spin text-blue-500' : ''}`} />
+                  <span>{isSyncingGoogleTasks ? 'Sincronizando...' : 'Sincronizar'}</span>
+                </button>
+
+                <button
+                  onClick={() => setIsQuickCreateOpen((prev) => !prev)}
+                  className="flex items-center gap-1 px-3 py-1 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Nueva en Google Tasks</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={loginWithGoogle}
+                className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors cursor-pointer"
+              >
+                <span>Conectar con Google</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Create in Google Tasks Form */}
+        {isQuickCreateOpen && (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!quickTitle.trim()) return;
+              setIsCreatingQuick(true);
+              try {
+                await createTaskInGoogleTasks(quickTitle.trim(), quickNotes.trim());
+                setQuickTitle('');
+                setQuickNotes('');
+                setIsQuickCreateOpen(false);
+              } catch (err) {
+                console.error(err);
+              } finally {
+                setIsCreatingQuick(false);
+              }
+            }}
+            className="pt-3 border-t border-[#f0f0ee] dark:border-[#2c2c2c] space-y-2 animate-in fade-in"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                type="text"
+                placeholder="Título de la tarea en Google Tasks..."
+                value={quickTitle}
+                onChange={(e) => setQuickTitle(e.target.value)}
+                required
+                className="px-3 py-1.5 text-xs bg-[#f4f4f2] dark:bg-[#2a2a2a] text-neutral-900 dark:text-neutral-100 rounded-lg focus:outline-hidden"
+              />
+              <input
+                type="text"
+                placeholder="Notas o descripción (opcional)..."
+                value={quickNotes}
+                onChange={(e) => setQuickNotes(e.target.value)}
+                className="px-3 py-1.5 text-xs bg-[#f4f4f2] dark:bg-[#2a2a2a] text-neutral-900 dark:text-neutral-100 rounded-lg focus:outline-hidden"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsQuickCreateOpen(false)}
+                className="px-3 py-1 text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isCreatingQuick || !quickTitle.trim()}
+                className="px-3.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {isCreatingQuick ? 'Guardando en Google...' : 'Guardar y Sincronizar'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
       {/* Regla de eventos vencidos: Banner informativo y estado de depuración */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-[#fafaf8] dark:bg-[#1f1f1f] border border-[#e9e9e7] dark:border-[#2e2e2e] text-xs text-neutral-500 dark:text-neutral-400">
         <div className="flex items-center gap-2">
@@ -177,16 +339,52 @@ export const TasksKanbanView: React.FC = () => {
         </button>
       </div>
 
-      {/* KANBAN BOARD VIEW WITH MOTION ANIMATIONS */}
+      {/* Helpful Tip about smooth drag-and-drop */}
+      <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-blue-50/70 via-purple-50/40 to-transparent dark:from-blue-950/30 dark:via-purple-950/20 dark:to-transparent border border-blue-100 dark:border-blue-900/40 text-xs text-blue-900 dark:text-blue-200 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <GripVertical className="w-4 h-4 text-blue-500 shrink-0" />
+          <span>
+            <strong className="font-semibold text-blue-950 dark:text-blue-100">Arrastre fluido activo:</strong> Arrastra y suelta cualquier tarjeta libremente entre columnas para cambiar su estado. Animación suave sin necesidad de flechas.
+          </span>
+        </div>
+        <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 shrink-0 hidden sm:inline font-medium">
+          ✨ Arrastrar y Soltar
+        </span>
+      </div>
+
+      {/* KANBAN BOARD VIEW WITH MOTION DRAG & DROP ANIMATIONS */}
       {viewMode === 'kanban' ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           {columns.map((col) => {
             const columnTasks = filteredTasks.filter((t) => t.status === col.id);
+            const isColumnActive = dragOverColId === col.id;
 
             return (
               <div
                 key={col.id}
-                className="bg-[#fcfcfb] dark:bg-[#1e1e1e] rounded-xl border border-[#e9e9e7] dark:border-[#2e2e2e] p-3 space-y-3"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragOverColId !== col.id) setDragOverColId(col.id);
+                }}
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  setDragOverColId(col.id);
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    if (dragOverColId === col.id) setDragOverColId(null);
+                  }
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleDropOnColumn(col.id);
+                }}
+                className={`rounded-2xl border p-3.5 space-y-3 transition-all duration-200 ${
+                  isColumnActive
+                    ? 'bg-blue-50/50 dark:bg-blue-950/30 border-blue-400 dark:border-blue-500 ring-2 ring-blue-400/30 shadow-md scale-[1.01]'
+                    : 'bg-[#fcfcfb] dark:bg-[#1e1e1e] border-[#e9e9e7] dark:border-[#2e2e2e]'
+                }`}
               >
                 {/* Column Header */}
                 <div className="flex items-center justify-between px-2 py-1">
@@ -199,29 +397,69 @@ export const TasksKanbanView: React.FC = () => {
                       {col.title}
                     </h3>
                   </div>
-                  <span className="font-mono text-xs tabular-nums text-neutral-400 dark:text-neutral-500 font-semibold px-2 py-0.5 rounded-md bg-white dark:bg-[#272727] shadow-2xs">
-                    {col.id === 'completed' ? historicalCompletedCount : columnTasks.length}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-xs tabular-nums text-neutral-400 dark:text-neutral-500 font-semibold px-2 py-0.5 rounded-md bg-white dark:bg-[#272727] shadow-2xs">
+                      {col.id === 'completed' ? historicalCompletedCount : columnTasks.length}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Cards Container with motion */}
+                {/* Animated Drop Target Indicator */}
+                <AnimatePresence>
+                  {draggedTaskId && isColumnActive && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, height: 50, scale: 1 }}
+                      exit={{ opacity: 0, height: 0, scale: 0.96 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                      className="rounded-xl border-2 border-dashed border-blue-400 dark:border-blue-500 bg-blue-100/60 dark:bg-blue-900/40 flex items-center justify-center text-xs font-semibold text-blue-700 dark:text-blue-300 gap-2 shadow-inner"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+                      <span>Soltar aquí para pasar a {col.title}</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Cards Container with motion layout */}
                 <div className="space-y-2.5 min-h-[300px]">
                   <AnimatePresence mode="popLayout">
                     {columnTasks.map((task) => {
                       const completedSubtasks = task.subtasks.filter((s) => s.completed).length;
+                      const taskNotes = getNotesForTask ? getNotesForTask(task.id) : [];
+                      const isDragging = draggedTaskId === task.id;
 
                       return (
                         <motion.div
                           key={task.id}
                           layout
                           initial={{ opacity: 0, y: 12, scale: 0.98 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          animate={{
+                            opacity: isDragging ? 0.35 : 1,
+                            y: 0,
+                            scale: isDragging ? 0.97 : 1,
+                          }}
                           exit={{ opacity: 0, scale: 0.95 }}
-                          transition={{ duration: 0.2, ease: 'easeOut' }}
+                          transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                          draggable={true}
+                          onDragStart={(e: any) => {
+                            if (e.dataTransfer) {
+                              e.dataTransfer.setData('text/plain', task.id);
+                              e.dataTransfer.effectAllowed = 'move';
+                            }
+                            setDraggedTaskId(task.id);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedTaskId(null);
+                            setDragOverColId(null);
+                          }}
                           onClick={() => setSelectedTaskForDetail(task)}
-                          className="bg-white dark:bg-[#262626] rounded-lg border border-[#e9e9e7] dark:border-[#333333] p-3.5 hover:shadow-sm hover:border-neutral-300 dark:hover:border-neutral-500 transition-all cursor-pointer space-y-2.5 group"
+                          className={`bg-white dark:bg-[#262626] rounded-xl border p-3.5 transition-all cursor-grab active:cursor-grabbing space-y-2.5 group select-none ${
+                            isDragging
+                              ? 'border-dashed border-blue-400 dark:border-blue-500 bg-blue-50/30 dark:bg-blue-950/20 shadow-none'
+                              : 'border-[#e9e9e7] dark:border-[#333333] hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md hover:-translate-y-0.5'
+                          }`}
                         >
-                          {/* Source Calendar & Priority */}
+                          {/* Source Calendar, Drag Handle & Priority */}
                           <div className="flex items-center justify-between gap-2">
                             <span
                               className="inline-flex items-center gap-1 text-[11px] font-medium truncate"
@@ -254,6 +492,7 @@ export const TasksKanbanView: React.FC = () => {
                               >
                                 {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Media' : 'Baja'}
                               </span>
+                              <GripVertical className="w-3.5 h-3.5 text-neutral-300 dark:text-neutral-600 group-hover:text-neutral-500 dark:group-hover:text-neutral-400 transition-colors shrink-0" />
                             </div>
                           </div>
 
@@ -288,64 +527,29 @@ export const TasksKanbanView: React.FC = () => {
                             </div>
                           )}
 
-                          {/* Move state controls */}
+                          {/* Smooth Drag Footer & Linked Notes */}
                           <div className="pt-2 flex items-center justify-between border-t border-[#f0f0ee] dark:border-[#2f2f2f] text-[11px]">
-                            {col.id !== 'pending' && (
+                            <div className="flex items-center gap-1 text-[10px] text-neutral-400 dark:text-neutral-500 font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                              <GripVertical className="w-3 h-3 text-neutral-400" />
+                              <span>Arrastrar</span>
+                            </div>
+
+                            {taskNotes.length > 0 ? (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  updateTaskStatus(task.id, 'pending');
+                                  setActiveTab('notes');
                                 }}
-                                className="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer"
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors cursor-pointer"
+                                title="Ver notas vinculadas"
                               >
-                                ← Pendiente
+                                <FileText className="w-2.5 h-2.5" />
+                                <span>{taskNotes.length} {taskNotes.length === 1 ? 'nota' : 'notas'}</span>
                               </button>
-                            )}
-                            {col.id === 'pending' && (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateTaskStatus(task.id, 'in_progress');
-                                  }}
-                                  className="text-blue-600 dark:text-blue-400 font-medium hover:underline transition-colors cursor-pointer"
-                                >
-                                  Iniciar →
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateTaskStatus(task.id, 'completed');
-                                  }}
-                                  className="text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
-                                  title="Finalizar directamente y eliminar duplicación"
-                                >
-                                  Finalizar ✓
-                                </button>
-                              </div>
-                            )}
-                            {col.id === 'in_progress' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updateTaskStatus(task.id, 'completed');
-                                }}
-                                className="text-emerald-600 dark:text-emerald-400 font-medium hover:underline transition-colors cursor-pointer flex items-center gap-1"
-                                title="Finalizar tarea y eliminar la duplicación de la app (el evento original se mantiene intacto)"
-                              >
-                                Finalizar y Eliminar →
-                              </button>
-                            )}
-                            {col.id === 'completed' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updateTaskStatus(task.id, 'in_progress');
-                                }}
-                                className="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer"
-                              >
-                                Reabrir
-                              </button>
+                            ) : (
+                              <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                                {col.title}
+                              </span>
                             )}
                           </div>
                         </motion.div>
@@ -355,7 +559,7 @@ export const TasksKanbanView: React.FC = () => {
 
                   {columnTasks.length === 0 && (
                     col.id === 'completed' ? (
-                      <div className="py-8 px-4 text-center space-y-2 border border-dashed border-emerald-200 dark:border-emerald-900/40 rounded-lg bg-emerald-50/30 dark:bg-emerald-950/20">
+                      <div className="py-8 px-4 text-center space-y-2 border border-dashed border-emerald-200 dark:border-emerald-900/40 rounded-xl bg-emerald-50/30 dark:bg-emerald-950/20">
                         <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                         </div>
@@ -363,12 +567,13 @@ export const TasksKanbanView: React.FC = () => {
                           {historicalCompletedCount} duplicaciones finalizadas
                         </p>
                         <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-snug">
-                          Las duplicaciones finalizadas se eliminan de este tablero. Los eventos originales en tus calendarios permanecen intactos.
+                          Arrastra tareas aquí para finalizarlas. Los eventos originales en tus calendarios permanecen intactos.
                         </p>
                       </div>
                     ) : (
-                      <div className="py-12 text-center text-xs text-neutral-400 dark:text-neutral-500 border border-dashed border-[#e0e0de] dark:border-[#2f2f2f] rounded-lg">
-                        Columna vacía
+                      <div className="py-12 text-center text-xs text-neutral-400 dark:text-neutral-500 border border-dashed border-[#e0e0de] dark:border-[#2f2f2f] rounded-xl flex flex-col items-center justify-center gap-1.5">
+                        <GripVertical className="w-4 h-4 text-neutral-300 dark:text-neutral-600" />
+                        <span>Columna vacía · Arrastra aquí</span>
                       </div>
                     )
                   )}

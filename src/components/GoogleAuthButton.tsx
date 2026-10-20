@@ -14,6 +14,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ compact = fa
     loginWithGoogle,
     logoutGoogle,
     refreshGoogleData,
+    setIsWorkspaceModalOpen,
   } = useCalendar();
 
   if (isGoogleConnected && user) {
@@ -28,28 +29,34 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ compact = fa
           <RefreshCw className={`w-3.5 h-3.5 ${isLoadingGoogle ? 'animate-spin' : ''}`} />
         </button>
 
-        <div className="flex items-center gap-2 px-2.5 py-1 bg-[#f4f4f2] dark:bg-[#252525] rounded-lg text-xs">
-          {user.photoURL ? (
-            <img
-              src={user.photoURL}
-              alt={user.displayName || 'Google'}
-              className="w-5 h-5 rounded-full object-cover shrink-0"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
-              {(user.displayName || user.email || 'G')[0].toUpperCase()}
-            </div>
-          )}
-          {!compact && (
-            <span className="truncate max-w-[120px] font-medium text-neutral-800 dark:text-neutral-200 text-[11px]">
-              {user.displayName || user.email?.split('@')[0]}
-            </span>
-          )}
+        <div className="flex items-center gap-1.5 px-2 py-1 bg-[#f4f4f2] dark:bg-[#252525] rounded-lg text-xs border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700 transition-all">
+          <button
+            onClick={() => setIsWorkspaceModalOpen(true)}
+            title="Ver cuenta y aplicaciones de Orion Workspace"
+            className="flex items-center gap-2 text-left hover:opacity-85 transition-opacity cursor-pointer"
+          >
+            {user.photoURL ? (
+              <img
+                src={user.photoURL}
+                alt={user.displayName || 'Google'}
+                className="w-5 h-5 rounded-full object-cover shrink-0 ring-1 ring-indigo-500/30"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+                {(user.displayName || user.email || 'G')[0].toUpperCase()}
+              </div>
+            )}
+            {!compact && (
+              <span className="truncate max-w-[120px] font-medium text-neutral-800 dark:text-neutral-200 text-[11px]">
+                {user.displayName || user.email?.split('@')[0]}
+              </span>
+            )}
+          </button>
           <button
             onClick={logoutGoogle}
             title="Desconectar cuenta de Google"
-            className="text-neutral-400 hover:text-rose-500 transition-colors ml-1 cursor-pointer"
+            className="text-neutral-400 hover:text-rose-500 transition-colors ml-1 cursor-pointer p-0.5 rounded"
           >
             <LogOut className="w-3 h-3" />
           </button>

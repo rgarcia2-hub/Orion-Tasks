@@ -8,6 +8,7 @@
         "uid": { "type": "string" },
         "email": { "type": "string" },
         "displayName": { "type": "string" },
+        "isProMember": { "type": "boolean" },
         "createdAt": { "type": "string" },
         "updatedAt": { "type": "string" }
       },
@@ -38,16 +39,65 @@
         "completedAt": { "type": "string", "maxLength": 100 }
       },
       "required": ["id", "userId", "title", "status", "priority", "createdAt"]
+    },
+    "AppNote": {
+      "title": "AppNote",
+      "description": "PRO Notes linked with tasks, events, tags, and formatting",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 300 },
+        "content": { "type": "string", "maxLength": 20000 },
+        "color": { "type": "string", "maxLength": 50 },
+        "isPinned": { "type": "boolean" },
+        "linkedTaskId": { "type": "string", "maxLength": 150 },
+        "linkedEventId": { "type": "string", "maxLength": 150 },
+        "createdAt": { "type": "string", "maxLength": 100 },
+        "updatedAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["id", "userId", "title", "createdAt"]
+    },
+    "OrionEmail": {
+      "title": "OrionEmail",
+      "description": "Internal or synced email message in Orion Mail",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "source": { "type": "string", "enum": ["gmail", "internal"] },
+        "fromName": { "type": "string", "maxLength": 200 },
+        "fromEmail": { "type": "string", "maxLength": 200 },
+        "to": { "type": "array", "items": { "type": "string" } },
+        "subject": { "type": "string", "maxLength": 500 },
+        "preview": { "type": "string", "maxLength": 1000 },
+        "body": { "type": "string", "maxLength": 50000 },
+        "folder": { "type": "string", "enum": ["inbox", "starred", "sent", "drafts", "trash"] },
+        "isRead": { "type": "boolean" },
+        "isStarred": { "type": "boolean" },
+        "labels": { "type": "array", "items": { "type": "string" } },
+        "date": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["id", "userId", "fromEmail", "subject", "folder", "date"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "UserProfile",
-      "description": "User profile data"
+      "description": "User profile data and settings"
     },
     "/users/{userId}/tasks/{taskId}": {
       "schema": "AppTask",
       "description": "User tasks stored in Firestore"
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": "AppNote",
+      "description": "User PRO notes linked with tasks and calendars"
+    },
+    "/users/{userId}/emails/{emailId}": {
+      "schema": "OrionEmail",
+      "description": "User emails and drafts in Orion Mail"
     }
   }
 }

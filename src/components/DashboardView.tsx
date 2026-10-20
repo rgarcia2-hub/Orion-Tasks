@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useCalendar } from '../context/CalendarContext';
-import { CalendarEvent } from '../types/calendar';
+import { CalendarEvent, TaskPriority } from '../types/calendar';
 import { formatEventTimeRange, getCountdownString } from '../utils/calendarData';
 import { GoogleAuthButton } from './GoogleAuthButton';
 import {
@@ -16,12 +16,16 @@ import {
   TrendingUp,
   ListTodo,
   Calendar as CalendarIcon,
-  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Flame,
+  Flag,
+  ArrowDown,
+  CalendarCheck,
 } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
   const {
-    nextUpcomingEvent,
     stats,
     tasks,
     updateTaskStatus,
@@ -32,11 +36,57 @@ export const DashboardView: React.FC = () => {
     setActiveTab,
     isGoogleConnected,
     isTaskExpired,
+    upcomingEventsList,
+    completeEvent,
+    getLinkedTaskForEvent,
+    changeEventPriority,
   } = useCalendar();
 
-  const countdown = nextUpcomingEvent
-    ? getCountdownString(nextUpcomingEvent.startDateTime)
-    : null;
+  // Sorting criterion for the upcoming card
+  const [selectedSort, setSelectedSort] = useState<'priority' | 'date' | 'today'>('priority');
+  const [eventIndex, setEventIndex] = useState<number>(0);
+
+  // Filter & sort upcoming events (upcomingEventsList already strictly excludes events completed in Kanban and expired events!)
+  const filteredAndSortedUpcoming = useMemo(() => {
+    let list = [...upcomingEventsList];
+
+    if (selectedSort === 'today') {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      list = list.filter((e) => {
+        try {
+          return new Date(e.startDateTime).toISOString().slice(0, 10) === todayStr;
+        } catch {
+          return false;
+        }
+      });
+    }
+
+    if (selectedSort === 'priority') {
+      const getPriorityScore = (evt: CalendarEvent) => {
+        const linked = getLinkedTaskForEvent(evt.id);
+        const p = linked?.priority || 'medium';
+        if (p === 'high') return 3;
+        if (p === 'medium') return 2;
+        return 1;
+      };
+
+      list.sort((a, b) => {
+        const diff = getPriorityScore(b) - getPriorityScore(a);
+        if (diff !== 0) return diff;
+        return new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime();
+      });
+    } else {
+      list.sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
+    }
+
+    return list;
+  }, [upcomingEventsList, selectedSort, getLinkedTaskForEvent]);
+
+  // Safe active event index
+  const safeIndex = Math.min(eventIndex, Math.max(0, filteredAndSortedUpcoming.length - 1));
+  const currentEvent = filteredAndSortedUpcoming[safeIndex] || null;
+  const linkedTask = currentEvent ? getLinkedTaskForEvent(currentEvent.id) : undefined;
+  const countdown = currentEvent ? getCountdownString(currentEvent.startDateTime) : null;
 
   const pendingTasks = tasks.filter((t) => t.status === 'pending' && (!isTaskExpired || !isTaskExpired(t)));
 
@@ -47,6 +97,12 @@ export const DashboardView: React.FC = () => {
     } catch {
       // Handled via toast in CalendarContext
     }
+  };
+
+  const handleCompleteCurrent = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentEvent) return;
+    completeEvent(currentEvent.id);
   };
 
   return (
@@ -76,85 +132,204 @@ export const DashboardView: React.FC = () => {
         {/* Next Upcoming Event */}
         <div className="lg:col-span-7 bg-white dark:bg-[#202020] rounded-xl border border-[#e9e9e7] dark:border-[#2e2e2e] p-6 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between gap-4 mb-4">
+            {/* Header of Next Event Card */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 mb-4 pb-3 border-b border-[#f0f0ee] dark:border-[#2a2a2a]">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500" />
-                <span className="text-xs font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400">
-                  Próximo Evento
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-semibold tracking-wider uppercase text-neutral-700 dark:text-neutral-300">
+                  Próximo Evento Más Importante
                 </span>
+                {filteredAndSortedUpcoming.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                    {filteredAndSortedUpcoming.length} {filteredAndSortedUpcoming.length === 1 ? 'pendiente' : 'pendientes'}
+                  </span>
+                )}
               </div>
-              {countdown && (
-                <div
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium font-mono tabular-nums ${
-                    countdown.isImminent
-                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                      : 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'
+
+              {/* Sorting Filter Selector */}
+              <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg text-xs">
+                <button
+                  onClick={() => setSelectedSort('priority')}
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                    selectedSort === 'priority'
+                      ? 'bg-white dark:bg-[#2a2a2a] text-neutral-900 dark:text-neutral-100 shadow-2xs font-semibold'
+                      : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400'
                   }`}
+                  title="Ordenar por prioridad más alta (Alta > Media > Baja)"
                 >
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>{countdown.text}</span>
-                </div>
-              )}
+                  Prioridad
+                </button>
+                <button
+                  onClick={() => setSelectedSort('date')}
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                    selectedSort === 'date'
+                      ? 'bg-white dark:bg-[#2a2a2a] text-neutral-900 dark:text-neutral-100 shadow-2xs font-semibold'
+                      : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400'
+                  }`}
+                  title="Ordenar cronológicamente por fecha"
+                >
+                  Fecha
+                </button>
+                <button
+                  onClick={() => setSelectedSort('today')}
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                    selectedSort === 'today'
+                      ? 'bg-white dark:bg-[#2a2a2a] text-neutral-900 dark:text-neutral-100 shadow-2xs font-semibold'
+                      : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400'
+                  }`}
+                  title="Mostrar únicamente eventos programados para hoy"
+                >
+                  Hoy
+                </button>
+              </div>
             </div>
 
-            {nextUpcomingEvent ? (
+            {currentEvent ? (
               <div className="space-y-4">
+                {/* Countdown & Pagination bar */}
+                <div className="flex items-center justify-between gap-2">
+                  {countdown && (
+                    <div
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium font-mono tabular-nums ${
+                        countdown.isImminent
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                          : 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'
+                      }`}
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>{countdown.text}</span>
+                    </div>
+                  )}
+
+                  {/* Multiple upcoming events pagination */}
+                  {filteredAndSortedUpcoming.length > 1 && (
+                    <div className="flex items-center gap-1 ml-auto text-xs font-mono tabular-nums text-neutral-500 dark:text-neutral-400">
+                      <span>
+                        {safeIndex + 1} de {filteredAndSortedUpcoming.length}
+                      </span>
+                      <div className="flex items-center gap-0.5 ml-1">
+                        <button
+                          onClick={() => setEventIndex((prev) => Math.max(0, prev - 1))}
+                          disabled={safeIndex === 0}
+                          aria-label="Evento anterior"
+                          className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() =>
+                            setEventIndex((prev) => Math.min(filteredAndSortedUpcoming.length - 1, prev + 1))
+                          }
+                          disabled={safeIndex >= filteredAndSortedUpcoming.length - 1}
+                          aria-label="Siguiente evento"
+                          className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <h3 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 leading-snug">
-                    {nextUpcomingEvent.title}
+                    {currentEvent.title}
                   </h3>
-                  <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+
+                  {/* Badges: Priority, Calendar, Date & Time, Kanban Status */}
+                  <div className="flex flex-wrap items-center gap-2 mt-2.5 text-xs">
+                    {/* Priority Badge */}
+                    {linkedTask ? (
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                          linkedTask.priority === 'high'
+                            ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/60'
+                            : linkedTask.priority === 'medium'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/60'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/60'
+                        }`}
+                      >
+                        {linkedTask.priority === 'high' ? (
+                          <Flame className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+                        ) : linkedTask.priority === 'medium' ? (
+                          <Flag className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                        ) : (
+                          <ArrowDown className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                        )}
+                        <span>
+                          Prioridad {linkedTask.priority === 'high' ? 'Alta' : linkedTask.priority === 'medium' ? 'Media' : 'Baja'}
+                        </span>
+                      </span>
+                    ) : (
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                        <Flag className="w-3 h-3" />
+                        <span>Prioridad Media</span>
+                      </div>
+                    )}
+
+                    {/* Calendar Badge */}
                     <span
                       className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium"
                       style={{
-                        backgroundColor: `${nextUpcomingEvent.calendarColor}15`,
-                        color: nextUpcomingEvent.calendarColor,
+                        backgroundColor: `${currentEvent.calendarColor}15`,
+                        color: currentEvent.calendarColor,
                       }}
                     >
                       <span
                         className="w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: nextUpcomingEvent.calendarColor }}
+                        style={{ backgroundColor: currentEvent.calendarColor }}
                       />
-                      {nextUpcomingEvent.calendarName}
+                      {currentEvent.calendarName}
                     </span>
-                    <span aria-hidden="true">·</span>
-                    <span className="font-mono tabular-nums">
-                      {formatEventTimeRange(nextUpcomingEvent.startDateTime, nextUpcomingEvent.endDateTime)}
+
+                    <span className="text-neutral-300 dark:text-neutral-600" aria-hidden="true">·</span>
+
+                    {/* Date and Time */}
+                    <span className="font-mono tabular-nums text-neutral-600 dark:text-neutral-300 text-xs font-medium">
+                      {formatEventTimeRange(currentEvent.startDateTime, currentEvent.endDateTime)}
                     </span>
                   </div>
                 </div>
 
-                {nextUpcomingEvent.description && (
+                {currentEvent.description && (
                   <p className="text-xs text-neutral-600 dark:text-neutral-300 line-clamp-2 leading-relaxed">
-                    {nextUpcomingEvent.description}
+                    {currentEvent.description}
                   </p>
                 )}
 
-                <div className="flex flex-wrap items-center gap-3 pt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                  {nextUpcomingEvent.location && (
+                <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                  {currentEvent.location && (
                     <div className="flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate max-w-[220px]">{nextUpcomingEvent.location}</span>
+                      <span className="truncate max-w-[220px]">{currentEvent.location}</span>
                     </div>
                   )}
-                  {nextUpcomingEvent.attendees && nextUpcomingEvent.attendees.length > 0 && (
+                  {currentEvent.attendees && currentEvent.attendees.length > 0 && (
                     <div className="flex items-center gap-1.5">
                       <Users className="w-3.5 h-3.5 shrink-0" />
-                      <span>{nextUpcomingEvent.attendees.length} asistentes</span>
+                      <span>{currentEvent.attendees.length} asistentes</span>
+                    </div>
+                  )}
+                  {linkedTask && (
+                    <div className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-medium">
+                      <ListTodo className="w-3.5 h-3.5" />
+                      <span>
+                        En Kanban ({linkedTask.status === 'in_progress' ? 'En curso' : 'Pendiente'})
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
             ) : (
               <div className="py-8 text-center space-y-3">
-                <CalendarIcon className="w-8 h-8 text-neutral-300 dark:text-neutral-600 mx-auto" />
-                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                  No hay eventos próximos en tu agenda
+                <CalendarCheck className="w-8 h-8 text-emerald-500 dark:text-emerald-400 mx-auto" />
+                <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                  ¡Todo al día! No tienes eventos pendientes
                 </p>
                 <p className="text-xs text-neutral-400 max-w-sm mx-auto">
                   {isGoogleConnected
-                    ? 'Tus eventos aparecerán aquí automáticamente conforme se programen.'
-                    : 'Conecta tu Google Calendar o crea un evento para comenzar.'}
+                    ? 'Los eventos completados en el Kanban ya no aparecen aquí. Los próximos eventos sincronizados se mostrarán conforme se programen.'
+                    : 'Conecta tu Google Calendar o crea un evento nuevo para comenzar.'}
                 </p>
                 {!isGoogleConnected && (
                   <div className="pt-2 flex items-center justify-center">
@@ -166,10 +341,10 @@ export const DashboardView: React.FC = () => {
           </div>
 
           {/* Action Footer */}
-          {nextUpcomingEvent && (
-            <div className="flex items-center justify-between gap-3 pt-6 mt-6 border-t border-[#f0f0ee] dark:border-[#2a2a2a]">
+          {currentEvent && (
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-5 mt-6 border-t border-[#f0f0ee] dark:border-[#2a2a2a]">
               <button
-                onClick={() => setSelectedEventForDetail(nextUpcomingEvent)}
+                onClick={() => setSelectedEventForDetail(currentEvent)}
                 className="text-xs font-medium text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <span>Inspeccionar detalles</span>
@@ -177,29 +352,40 @@ export const DashboardView: React.FC = () => {
               </button>
 
               <div className="flex items-center gap-2">
-                {nextUpcomingEvent.meetLink && (
+                {/* Complete / Finalize button (instantly marks completed in Kanban, removes duplication, advances to next) */}
+                <button
+                  onClick={handleCompleteCurrent}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/60 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                  title="Finalizar este evento: se marca como hecho en el Kanban y pasa al siguiente evento automáticamente"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Finalizar evento</span>
+                </button>
+
+                {currentEvent.meetLink && (
                   <a
-                    href={nextUpcomingEvent.meetLink}
+                    href={currentEvent.meetLink}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
                   >
                     <Video className="w-3.5 h-3.5" />
-                    <span>Unirse a Meet</span>
+                    <span>Meet</span>
                   </a>
                 )}
 
-                {isClonedInApp(nextUpcomingEvent.id) ? (
+                {isClonedInApp(currentEvent.id) ? (
                   <button
                     onClick={() => setActiveTab('tasks')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-lg transition-colors cursor-pointer"
+                    title="Ir al tablero Kanban para ver este evento duplicado"
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>En el Flujo de la App</span>
+                    <ListTodo className="w-3.5 h-3.5" />
+                    <span>Ver en Kanban</span>
                   </button>
                 ) : (
                   <button
-                    onClick={(e) => handleDuplicate(e, nextUpcomingEvent)}
+                    onClick={(e) => handleDuplicate(e, currentEvent)}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 rounded-lg shadow-xs transition-colors cursor-pointer"
                   >
                     <Copy className="w-3.5 h-3.5" />

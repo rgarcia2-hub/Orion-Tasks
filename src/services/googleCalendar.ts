@@ -1,42 +1,62 @@
-import { initializeApp } from 'firebase/app';
 import {
-  getAuth,
   signInWithPopup,
   GoogleAuthProvider,
   onAuthStateChanged,
   User,
   signOut,
 } from 'firebase/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { auth } from './firebase';
 import { Calendar, CalendarEvent } from '../types/calendar';
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+export { auth };
 
 export const SCOPES = [
   'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
   'https://www.googleapis.com/auth/calendar.events.readonly',
+  'https://www.googleapis.com/auth/tasks',
+  'https://www.googleapis.com/auth/tasks.readonly',
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.send',
 ];
 
 const provider = new GoogleAuthProvider();
 SCOPES.forEach((scope) => provider.addScope(scope));
-// Force consent screen to ensure refresh/access tokens and scope permissions are confirmed
 provider.setCustomParameters({
-  prompt: 'consent',
+  prompt: 'select_account',
 });
 
+const TOKEN_STORAGE_KEY = 'orion_google_access_token_v3';
+
 let isSigningIn = false;
-let cachedAccessToken: string | null = null;
+let cachedAccessToken: string | null = (() => {
+  try {
+    return localStorage.getItem(TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+})();
 
 export const initAuth = (
-  onAuthSuccess?: (user: User, token: string) => void,
+  onAuthSuccess?: (user: User, token: string | null) => void,
   onAuthFailure?: () => void
 ) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
-    if (user && cachedAccessToken) {
+    if (user) {
+      if (!cachedAccessToken) {
+        try {
+          cachedAccessToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+        } catch {
+          cachedAccessToken = null;
+        }
+      }
       if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
     } else if (!isSigningIn) {
       cachedAccessToken = null;
+      try {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+      } catch (e) {
+        console.error(e);
+      }
       if (onAuthFailure) onAuthFailure();
     }
   });
@@ -52,6 +72,11 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     }
 
     cachedAccessToken = credential.accessToken;
+    try {
+      localStorage.setItem(TOKEN_STORAGE_KEY, credential.accessToken);
+    } catch (e) {
+      console.error(e);
+    }
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
     console.error('Error durante el inicio de sesión con Google:', error);
@@ -62,12 +87,24 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
+  if (!cachedAccessToken) {
+    try {
+      cachedAccessToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+    } catch {
+      cachedAccessToken = null;
+    }
+  }
   return cachedAccessToken;
 };
 
 export const googleSignOut = async () => {
   await signOut(auth);
   cachedAccessToken = null;
+  try {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch (e) {
+    console.error(e);
+  }
 };
 
 // Fetch real Google Calendars from Google Calendar API

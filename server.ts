@@ -14,6 +14,7 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json());
+app.use(express.static(path.resolve(__dirname, 'public')));
 
 // Initialize Gemini Client
 const apiKey = process.env.GEMINI_API_KEY;

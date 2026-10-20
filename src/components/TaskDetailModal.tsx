@@ -17,6 +17,8 @@ import {
   ExternalLink,
   Tag,
   ListTodo,
+  FileText,
+  Link2,
 } from 'lucide-react';
 
 export const TaskDetailModal: React.FC = () => {
@@ -31,6 +33,9 @@ export const TaskDetailModal: React.FC = () => {
     addSubtask,
     deleteSubtask,
     applyAISummary,
+    getNotesForTask,
+    addNote,
+    setActiveTab,
   } = useCalendar();
 
   const [newSubtaskText, setNewSubtaskText] = useState('');
@@ -297,6 +302,81 @@ export const TaskDetailModal: React.FC = () => {
             )}
 
             {aiError && <p className="text-xs text-rose-600 dark:text-rose-400">{aiError}</p>}
+          </div>
+
+          {/* Linked Notes Section */}
+          <div className="p-4 rounded-xl border border-[#e9e9e7] dark:border-[#2f2f2f] bg-[#fafaf8] dark:bg-[#252525] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                <FileText className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
+                <span>Notas vinculadas a esta tarea</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  addNote({
+                    title: `Apuntes: ${task.title}`,
+                    content: task.notes ? `Contexto de la tarea:\n${task.notes}\n\n` : '',
+                    tags: ['Tarea', task.calendarName],
+                    color: task.calendarColor || '#3B82F6',
+                    linkedTaskId: task.id,
+                  });
+                  setSelectedTaskForDetail(null);
+                  setActiveTab('notes');
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-[#1f1f1f] border border-[#e5e5e3] dark:border-[#383838] rounded-lg hover:bg-neutral-100 dark:hover:bg-[#303030] transition-colors cursor-pointer shadow-2xs"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Crear Nota Vinculada</span>
+              </button>
+            </div>
+
+            {(() => {
+              const taskNotes = getNotesForTask(task.id);
+              if (taskNotes.length === 0) {
+                return (
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    No hay notas vinculadas aún. Puedes crear una nota con un clic para registrar minutas, actas y apuntes asociados directamente a esta tarea.
+                  </p>
+                );
+              }
+
+              return (
+                <div className="space-y-1.5">
+                  {taskNotes.map((n) => (
+                    <div
+                      key={n.id}
+                      className="p-2.5 rounded-lg bg-white/90 dark:bg-[#222222] border border-[#e5e5e3] dark:border-[#333333] flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {n.color && (
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: n.color }} />
+                        )}
+                        <span className="font-semibold text-neutral-800 dark:text-neutral-200 truncate">
+                          {n.title}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-mono truncate hidden sm:inline">
+                          {n.content ? n.content.substring(0, 45) + '...' : 'Nota vacía'}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedTaskForDetail(null);
+                          setActiveTab('notes');
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer shrink-0"
+                      >
+                        <span>Abrir nota</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Notes Textarea */}
