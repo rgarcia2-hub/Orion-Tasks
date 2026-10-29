@@ -174,7 +174,13 @@ export const MailReaderView: React.FC<MailReaderViewProps> = ({
   ];
 
   return (
-    <div className="flex-1 h-full bg-[#fafafa] dark:bg-[#141414] flex flex-col justify-between overflow-hidden">
+    <div
+      className={`flex-1 h-full bg-[#fafafa] dark:bg-[#141414] flex flex-col justify-between overflow-hidden transition-all duration-300 relative ${
+        isAnalyzingEmail
+          ? 'ai-contour-glow ring-2 ring-amber-300/80 dark:ring-amber-200/70 z-20'
+          : ''
+      }`}
+    >
       {/* Top Action Toolbar */}
       <div className="h-14 px-6 border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-[#181818] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-1.5">
@@ -216,25 +222,25 @@ export const MailReaderView: React.FC<MailReaderViewProps> = ({
             <span>Agendar Evento</span>
           </button>
 
-          {/* Primary AI Scan Button with Yellowish-White Starlight Glow */}
+          {/* Primary AI Scan Button with Yellowish-White Starlight Contour & Glowing Letters */}
           <button
             onClick={() => handleScanEmailWithAI(true)}
             disabled={isAnalyzingEmail}
             title="Escanear correo con IA y extraer tareas o eventos"
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:opacity-60 ${
               isAnalyzingEmail
-                ? 'bg-amber-950/70 text-amber-100 border border-amber-300/80 shadow-[0_0_24px_rgba(254,240,138,0.65)] ai-starlight-pulse'
+                ? 'bg-amber-950/80 text-amber-100 border border-amber-300/90 shadow-[0_0_24px_rgba(254,240,138,0.7),inset_0_0_10px_rgba(254,240,138,0.3)] ai-starlight-pulse'
                 : 'text-amber-950 dark:text-amber-100 bg-gradient-to-r from-amber-50 to-amber-100/80 dark:from-neutral-900 dark:to-amber-950/40 border border-amber-300/60 dark:border-amber-400/40 hover:shadow-[0_0_18px_rgba(254,240,138,0.45)] hover:border-amber-300'
             }`}
           >
             <Sparkles
               className={`w-3.5 h-3.5 transition-transform ${
                 isAnalyzingEmail
-                  ? 'animate-spin text-amber-300'
+                  ? 'animate-spin text-amber-300 drop-shadow-[0_0_8px_rgba(254,240,138,0.9)]'
                   : 'text-amber-500 dark:text-amber-300 drop-shadow-[0_0_6px_rgba(254,240,138,0.7)]'
               }`}
             />
-            <span className={isAnalyzingEmail ? 'ai-analyzing-glow' : ''}>
+            <span className={isAnalyzingEmail ? 'ai-letters-glow' : ''}>
               {isAnalyzingEmail ? 'Escaneando con IA...' : 'Escanear con IA'}
             </span>
           </button>
@@ -247,15 +253,16 @@ export const MailReaderView: React.FC<MailReaderViewProps> = ({
 
       {/* Main Reading View Content */}
       <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 relative">
-        {/* Animated Holographic Laser Scanning Beam (Warm Yellowish-White Glow) */}
-        {isAnalyzingEmail && (
-          <div className="ai-scan-laser" />
-        )}
-
-        {/* Subject & Metadata */}
+        {/* Subject & Metadata with Radiant Letters Glow */}
         <div>
           <div className="flex items-start justify-between gap-4">
-            <h1 className="text-xl sm:text-2xl font-semibold text-neutral-950 dark:text-white tracking-tight">
+            <h1
+              className={`text-xl sm:text-2xl font-semibold tracking-tight transition-all duration-300 ${
+                isAnalyzingEmail
+                  ? 'ai-letters-glow text-amber-950 dark:text-amber-100'
+                  : 'text-neutral-950 dark:text-white'
+              }`}
+            >
               {email.subject}
             </h1>
 
@@ -311,22 +318,22 @@ export const MailReaderView: React.FC<MailReaderViewProps> = ({
           </div>
         </div>
 
-        {/* AI Scanning Active HUD Banner */}
+        {/* AI Scanning Active HUD Banner with Starlight Contour & Glowing Letters */}
         {isAnalyzingEmail && (
-          <div className="p-3.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-300/60 dark:border-amber-400/40 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200 shadow-[0_0_20px_rgba(254,240,138,0.3)]">
+          <div className="p-3.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-300/80 dark:border-amber-400/60 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200 shadow-[0_0_24px_rgba(254,240,138,0.45),inset_0_0_12px_rgba(254,240,138,0.15)] ring-1 ring-amber-300/60">
             <div className="flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 animate-spin text-amber-500 dark:text-amber-300" />
+              <Sparkles className="w-4 h-4 animate-spin text-amber-500 dark:text-amber-300 drop-shadow-[0_0_8px_rgba(254,240,138,0.85)]" />
               <div>
-                <span className="font-semibold ai-analyzing-glow">
+                <span className="font-semibold ai-letters-glow block">
                   Escaneando correspondencia con IA...
                 </span>
-                <p className="text-[11px] text-amber-700 dark:text-amber-300/80">
+                <p className="text-[11px] text-amber-700 dark:text-amber-300/80 ai-letters-glow">
                   Detectando tareas accionables, fechas límites y solicitudes de reunión
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] font-mono text-amber-600 dark:text-amber-400">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+            <div className="flex items-center gap-1.5 text-[11px] font-mono text-amber-700 dark:text-amber-300 font-bold ai-letters-glow">
+              <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping shadow-[0_0_8px_rgba(254,240,138,1)]" />
               <span>Orion AI</span>
             </div>
           </div>
@@ -393,8 +400,8 @@ export const MailReaderView: React.FC<MailReaderViewProps> = ({
           </div>
         )}
 
-        {/* Message Body */}
-        <div className="relative">
+        {/* Message Body with Glowing Letters during AI analysis */}
+        <div className={`relative transition-all duration-300 ${isAnalyzingEmail ? 'ai-reading-letters-glow' : ''}`}>
           <EmailBodyRenderer
             body={email.body}
             bodyHtml={email.bodyHtml}

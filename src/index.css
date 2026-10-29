@@ -7,58 +7,90 @@
 }
 
 /* AI Warm Yellowish-White Starlight glow effect ("blanco amarillento, color más IA") */
-@keyframes ai-text-glow {
+@keyframes ai-letters-shimmer {
   0%, 100% {
-    text-shadow: 0 0 6px rgba(254, 240, 138, 0.7), 0 0 16px rgba(253, 224, 71, 0.35);
+    text-shadow: 0 0 6px rgba(254, 240, 138, 0.75), 0 0 14px rgba(253, 224, 71, 0.45), 0 0 1px rgba(255, 255, 255, 0.9);
     color: #fef08a;
   }
   50% {
-    text-shadow: 0 0 15px rgba(255, 255, 255, 0.98), 0 0 28px rgba(254, 243, 199, 0.95), 0 0 45px rgba(250, 204, 21, 0.6);
+    text-shadow: 0 0 14px rgba(255, 255, 255, 1), 0 0 28px rgba(254, 243, 199, 0.95), 0 0 42px rgba(250, 204, 21, 0.65), 0 0 3px #fff;
     color: #ffffff;
   }
 }
 
+.ai-letters-glow,
 .ai-analyzing-glow {
-  animation: ai-text-glow 1.6s ease-in-out infinite;
+  animation: ai-letters-shimmer 1.8s ease-in-out infinite;
   transition: all 0.3s ease;
 }
 
-/* AI Laser Scanning Beam & Starlight Pulse (Warm yellowish-white AI aesthetic) */
-@keyframes ai-scan-sweep {
-  0% {
-    top: 0%;
-    opacity: 0;
+/* Glowing text for email body paragraphs, headings and words during AI analysis */
+@keyframes ai-body-shimmer {
+  0%, 100% {
+    text-shadow: 0 0 6px rgba(254, 240, 138, 0.7), 0 0 14px rgba(253, 224, 71, 0.35);
   }
-  15% {
-    opacity: 1;
-  }
-  85% {
-    opacity: 1;
-  }
-  100% {
-    top: 100%;
-    opacity: 0;
+  50% {
+    text-shadow: 0 0 14px rgba(255, 255, 255, 0.98), 0 0 26px rgba(254, 240, 138, 0.85), 0 0 38px rgba(250, 204, 21, 0.5), 0 0 2px #fff;
   }
 }
 
-.ai-scan-laser {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, rgba(254, 249, 195, 0.7) 15%, #ffffff 50%, rgba(254, 240, 138, 0.8) 85%, transparent);
-  box-shadow: 0 0 18px 4px rgba(254, 240, 138, 0.9), 0 0 35px 8px rgba(255, 255, 255, 0.65);
-  animation: ai-scan-sweep 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  pointer-events: none;
-  z-index: 30;
+.ai-reading-letters-glow,
+.ai-reading-letters-glow p,
+.ai-reading-letters-glow h1,
+.ai-reading-letters-glow h2,
+.ai-reading-letters-glow h3,
+.ai-reading-letters-glow h4,
+.ai-reading-letters-glow h5,
+.ai-reading-letters-glow h6,
+.ai-reading-letters-glow span,
+.ai-reading-letters-glow li,
+.ai-reading-letters-glow strong,
+.ai-reading-letters-glow b,
+.ai-reading-letters-glow em,
+.ai-reading-letters-glow i,
+.ai-reading-letters-glow td,
+.ai-reading-letters-glow th,
+.ai-reading-letters-glow div,
+.ai-reading-letters-glow a {
+  animation: ai-body-shimmer 2s ease-in-out infinite !important;
+  transition: text-shadow 0.3s ease;
+}
+
+.ai-reading-letters-glow {
+  box-shadow: 0 0 30px rgba(254, 240, 138, 0.25);
+  border-radius: 1rem;
+}
+
+/* Exterior contour glow in warm yellowish-white ("el contorno exterior, o lo de antes, pero con el nuevo color") */
+@keyframes ai-contour-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 0 1.5px rgba(254, 240, 138, 0.75),
+      0 0 24px 3px rgba(254, 240, 138, 0.45),
+      0 0 55px 8px rgba(253, 224, 71, 0.22),
+      inset 0 0 18px rgba(254, 240, 138, 0.12);
+    border-color: rgba(254, 240, 138, 0.85);
+  }
+  50% {
+    box-shadow: 
+      0 0 0 2.5px rgba(255, 255, 255, 0.95),
+      0 0 38px 6px rgba(254, 240, 138, 0.75),
+      0 0 80px 16px rgba(253, 224, 71, 0.4),
+      inset 0 0 28px rgba(254, 240, 138, 0.22);
+    border-color: rgba(255, 255, 255, 0.95);
+  }
+}
+
+.ai-contour-glow {
+  animation: ai-contour-pulse 2s ease-in-out infinite;
 }
 
 @keyframes ai-starlight-pulse {
   0%, 100% {
-    box-shadow: 0 0 15px -1px rgba(254, 240, 138, 0.4), 0 0 6px 0 rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 15px -1px rgba(254, 240, 138, 0.45), 0 0 6px 0 rgba(255, 255, 255, 0.5);
   }
   50% {
-    box-shadow: 0 0 28px 4px rgba(254, 240, 138, 0.8), 0 0 16px 2px rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 28px 4px rgba(254, 240, 138, 0.85), 0 0 16px 2px rgba(255, 255, 255, 0.95);
   }
 }
 
