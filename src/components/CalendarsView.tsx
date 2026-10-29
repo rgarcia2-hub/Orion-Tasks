@@ -50,6 +50,7 @@ export const CalendarsView: React.FC<CalendarsViewProps> = ({
     refreshGoogleData,
     googleSyncError,
     updateCalendarColor,
+    loginWithGoogle,
   } = useCalendar();
 
   const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('grid');
@@ -149,9 +150,17 @@ export const CalendarsView: React.FC<CalendarsViewProps> = ({
       )}
 
       {googleSyncError && (
-        <div className="p-3 rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{googleSyncError}</span>
+        <div className="p-3 rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+            <span className="truncate">{googleSyncError}</span>
+          </div>
+          <button
+            onClick={loginWithGoogle}
+            className="self-start sm:self-center px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer shrink-0 shadow-2xs"
+          >
+            Conectar con Google
+          </button>
         </div>
       )}
 

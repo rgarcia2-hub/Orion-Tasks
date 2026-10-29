@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { User } from 'firebase/auth';
-import { Calendar, CalendarEvent, AppTask, TaskStatus, TaskPriority, AISummaryResult, AppNote } from '../types/calendar';
+import { Calendar, CalendarEvent, AppTask, TaskStatus, TaskPriority, AISummaryResult, AppNote, HabitItem } from '../types/calendar';
 import { INITIAL_CALENDARS, INITIAL_EVENTS, INITIAL_TASKS, parseICSContent, isEventExpired } from '../utils/calendarData';
 import {
   initAuth,
@@ -8,6 +8,7 @@ import {
   googleSignOut,
   fetchGoogleCalendars,
   fetchGoogleCalendarEvents,
+  clearStoredAccessToken,
 } from '../services/googleCalendar';
 import {
   testConnection,
@@ -30,6 +31,18 @@ import {
   deleteGoogleTask,
   GoogleTaskList,
 } from '../services/googleTasks';
+import {
+  OrionNotificationItem,
+  NotificationSettings,
+  DEFAULT_NOTIFICATION_SETTINGS,
+  getNotificationPermission,
+  requestNotificationPermission,
+  sendDesktopNotification,
+  registerServiceWorker,
+} from '../services/notificationService';
+import { formatEventShortTime } from '../utils/calendarData';
+
+registerServiceWorker();
 
 interface GoogleTaskConfirmAction {
   type: 'complete' | 'delete';
@@ -79,6 +92,7 @@ interface CalendarContextType {
   addCalendar: (name: string, color: string, description?: string) => void;
   updateCalendarColor: (calendarId: string, newColor: string) => void;
   addEvent: (event: Omit<CalendarEvent, 'id'>) => CalendarEvent;
+  updateEvent: (eventId: string, updates: Partial<CalendarEvent>) => void;
   deleteEvent: (eventId: string) => void;
   importICS: (icsContent: string, calendarName?: string, calendarColor?: string) => number;
 
@@ -153,6 +167,30 @@ interface CalendarContextType {
 
   upcomingEventsList: CalendarEvent[];
   changeEventPriority: (eventId: string, priority: TaskPriority) => void;
+
+  // Hábitos (Habit Tracker)
+  habits: HabitItem[];
+  addHabit: (title: string, category?: string, color?: string) => HabitItem;
+  toggleHabitDate: (habitId: string, dateStr: string) => void;
+  deleteHabit: (habitId: string) => void;
+
+  // Spotlight Universal Search
+  isSpotlightOpen: boolean;
+  setIsSpotlightOpen: React.Dispatch<React.SetStateAction<boolean>>;
+
+  // Notification system
+  notificationSettings: NotificationSettings;
+  updateNotificationSettings: (updates: Partial<NotificationSettings>) => void;
+  notifications: OrionNotificationItem[];
+  unreadNotificationCount: number;
+  desktopPermission: NotificationPermission | 'unsupported';
+  requestDesktopPermission: () => Promise<NotificationPermission | 'unsupported'>;
+  markAllNotificationsAsRead: () => void;
+  clearNotifications: () => void;
+  deleteNotification: (id: string) => void;
+  triggerTestNotification: () => Promise<void>;
+  isNotificationCenterOpen: boolean;
+  setIsNotificationCenterOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
@@ -166,6 +204,51 @@ const STORAGE_KEY_COMPLETED_COUNT = 'orion_completed_count_v3';
 const STORAGE_KEY_COMPLETED_EVENTS = 'orion_completed_events_v3';
 const STORAGE_KEY_PRO_MEMBER = 'orion_pro_member_v3';
 const STORAGE_KEY_NOTES = 'orion_notes_v3';
+const STORAGE_KEY_HABITS = 'orion_habits_v1';
+const STORAGE_KEY_NOTIF_SETTINGS = 'orion_notif_settings_v1';
+const STORAGE_KEY_NOTIFICATIONS = 'orion_notifications_v1';
+
+const INITIAL_HABITS: HabitItem[] = [
+  {
+    id: 'habit-1',
+    title: 'Planificar el día y revisar tareas',
+    category: 'Productividad',
+    targetDaysPerWeek: 5,
+    completedDates: [
+      new Date(Date.now() - 86400000).toISOString().split('T')[0],
+      new Date().toISOString().split('T')[0],
+    ],
+    color: '#3B82F6',
+    streak: 2,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'habit-2',
+    title: 'Revisar y procesar correo clave',
+    category: 'Mail',
+    targetDaysPerWeek: 5,
+    completedDates: [
+      new Date(Date.now() - 86400000).toISOString().split('T')[0],
+    ],
+    color: '#8B5CF6',
+    streak: 1,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'habit-3',
+    title: 'Bloque de foco y lectura de notas',
+    category: 'Foco',
+    targetDaysPerWeek: 4,
+    completedDates: [
+      new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
+      new Date(Date.now() - 86400000).toISOString().split('T')[0],
+      new Date().toISOString().split('T')[0],
+    ],
+    color: '#10B981',
+    streak: 3,
+    createdAt: new Date().toISOString(),
+  },
+];
 
 const INITIAL_NOTES: AppNote[] = [
   {
@@ -251,6 +334,102 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [notes]);
 
+  // Hábitos state & streak calculation
+  const [habits, setHabits] = useState<HabitItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_HABITS);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return INITIAL_HABITS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_HABITS, JSON.stringify(habits));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [habits]);
+
+  const calculateStreak = (dates: string[]): number => {
+    if (!dates || dates.length === 0) return 0;
+    const sorted = Array.from(new Set(dates)).sort().reverse();
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    if (!sorted.includes(today) && !sorted.includes(yesterday)) {
+      return 0;
+    }
+
+    let currentStreak = 0;
+    let checkDate = sorted.includes(today) ? new Date() : new Date(Date.now() - 86400000);
+
+    for (let i = 0; i < 365; i++) {
+      const formatted = checkDate.toISOString().split('T')[0];
+      if (sorted.includes(formatted)) {
+        currentStreak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+    return currentStreak;
+  };
+
+  const addHabit = (title: string, category: string = 'General', color: string = '#3B82F6'): HabitItem => {
+    const newHabit: HabitItem = {
+      id: 'habit-' + Date.now(),
+      title: title.trim(),
+      category: category.trim() || 'General',
+      targetDaysPerWeek: 5,
+      completedDates: [],
+      color,
+      streak: 0,
+      createdAt: new Date().toISOString(),
+    };
+    setHabits((prev) => [newHabit, ...prev]);
+    return newHabit;
+  };
+
+  const toggleHabitDate = (habitId: string, dateStr: string) => {
+    setHabits((prev) =>
+      prev.map((h) => {
+        if (h.id !== habitId) return h;
+        const exists = h.completedDates.includes(dateStr);
+        const nextDates = exists
+          ? h.completedDates.filter((d) => d !== dateStr)
+          : [...h.completedDates, dateStr];
+        return {
+          ...h,
+          completedDates: nextDates,
+          streak: calculateStreak(nextDates),
+        };
+      })
+    );
+  };
+
+  const deleteHabit = (habitId: string) => {
+    setHabits((prev) => prev.filter((h) => h.id !== habitId));
+  };
+
+  // Spotlight Universal Search State & Shortcut
+  const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSpotlightOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Toast notification state
   const [toast, setToast] = useState<{ id: string; message: string; undoTask?: AppTask } | null>(null);
 
@@ -264,6 +443,109 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [toast]);
 
   const dismissToast = () => setToast(null);
+
+  // Notification System State
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_NOTIF_SETTINGS);
+      if (saved) return { ...DEFAULT_NOTIFICATION_SETTINGS, ...JSON.parse(saved) };
+    } catch {}
+    return DEFAULT_NOTIFICATION_SETTINGS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_NOTIF_SETTINGS, JSON.stringify(notificationSettings));
+    } catch {}
+  }, [notificationSettings]);
+
+  const updateNotificationSettings = (updates: Partial<NotificationSettings>) => {
+    setNotificationSettings((prev) => ({ ...prev, ...updates }));
+  };
+
+  const [notifications, setNotifications] = useState<OrionNotificationItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_NOTIFICATIONS);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify(notifications));
+    } catch {}
+  }, [notifications]);
+
+  const [desktopPermission, setDesktopPermission] = useState<NotificationPermission | 'unsupported'>(() => {
+    return getNotificationPermission();
+  });
+
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+
+  const unreadNotificationCount = useMemo(() => {
+    return notifications.filter((n) => !n.read).length;
+  }, [notifications]);
+
+  const markAllNotificationsAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
+  };
+
+  const deleteNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const requestDesktopPermission = async (): Promise<NotificationPermission | 'unsupported'> => {
+    const perm = await requestNotificationPermission();
+    setDesktopPermission(perm);
+    if (perm === 'granted') {
+      sendDesktopNotification({
+        title: '🔔 Orion Notifications Activas',
+        body: 'Notificaciones de escritorio habilitadas para eventos y tareas.',
+        sound: notificationSettings.soundEnabled,
+      });
+      setToast({
+        id: `toast-${Date.now()}`,
+        message: '¡Avisos de escritorio activados!',
+      });
+    }
+    return perm;
+  };
+
+  const triggerTestNotification = async () => {
+    let perm = desktopPermission;
+    if (perm === 'default') {
+      perm = await requestDesktopPermission();
+    }
+
+    const testItem: OrionNotificationItem = {
+      id: `notif-${Date.now()}`,
+      title: '🔔 Notificación de prueba de Orion',
+      body: 'El sistema de avisos de escritorio y sonido está funcionando con éxito.',
+      timestamp: new Date().toISOString(),
+      type: 'system',
+      read: false,
+    };
+    setNotifications((prev) => [testItem, ...prev]);
+
+    await sendDesktopNotification({
+      title: '🔔 Orion Workspace',
+      body: '¡Todo listo! Tu sistema de notificaciones está configurado y funcionando.',
+      sound: notificationSettings.soundEnabled,
+      onClick: () => {
+        setIsNotificationCenterOpen(true);
+      },
+    });
+
+    setToast({
+      id: `toast-${Date.now()}`,
+      message: 'Notificación de prueba enviada',
+    });
+  };
 
   useEffect(() => {
     try {
@@ -548,6 +830,118 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<AppTask | null>(null);
   const [dateForNewEvent, setDateForNewEvent] = useState<string | null>(null);
 
+  // Background Notification Poller (runs every 30 seconds)
+  const alertedIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!notificationSettings.enabled) return;
+
+    const checkReminders = () => {
+      const now = Date.now();
+      const leadMs = notificationSettings.leadTimeMinutes * 60 * 1000;
+
+      // 1. Check Events
+      if (notificationSettings.notifyEvents && events.length > 0) {
+        events.forEach((evt) => {
+          if (!evt.startDateTime) return;
+          try {
+            const startMs = new Date(evt.startDateTime).getTime();
+            const diffMs = startMs - now;
+
+            // Trigger alert if event starts within lead time window (e.g. within 10 min, and has not yet started more than 2 min ago)
+            if (diffMs > -120000 && diffMs <= leadMs) {
+              const alertKey = `evt-${evt.id}-${new Date(evt.startDateTime).toDateString()}`;
+              if (!alertedIdsRef.current.has(alertKey)) {
+                alertedIdsRef.current.add(alertKey);
+
+                const minutesLeft = Math.max(0, Math.round(diffMs / 60000));
+                const timeText = minutesLeft === 0 ? '¡Comienza ahora!' : `En ${minutesLeft} minutos`;
+
+                const notifItem: OrionNotificationItem = {
+                  id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                  title: `Próximo evento: ${evt.title}`,
+                  body: `${timeText} (${formatEventShortTime(evt.startDateTime)})${evt.location ? ` · ${evt.location}` : ''}`,
+                  timestamp: new Date().toISOString(),
+                  type: 'event',
+                  read: false,
+                  targetId: evt.id,
+                  targetApp: 'calendar',
+                };
+
+                setNotifications((prev) => [notifItem, ...prev.slice(0, 49)]);
+
+                sendDesktopNotification({
+                  title: `🔔 ${evt.title}`,
+                  body: `${timeText} (${formatEventShortTime(evt.startDateTime)})${evt.location ? ` · ${evt.location}` : ''}`,
+                  sound: notificationSettings.soundEnabled,
+                  onClick: () => {
+                    setCurrentApp('calendar');
+                    setSelectedEventForDetail(evt);
+                  },
+                });
+              }
+            }
+          } catch {}
+        });
+      }
+
+      // 2. Check Tasks
+      if (notificationSettings.notifyTasks && tasks.length > 0) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        tasks.forEach((task) => {
+          if (task.status === 'completed') return;
+          const taskDateStr = (task.startDateTime || task.endDateTime || '').split('T')[0];
+          if (taskDateStr === todayStr) {
+            const alertKey = `task-${task.id}-${todayStr}`;
+            if (!alertedIdsRef.current.has(alertKey)) {
+              alertedIdsRef.current.add(alertKey);
+
+              const notifItem: OrionNotificationItem = {
+                id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                title: `Tarea de hoy: ${task.title}`,
+                body: `Prioridad ${task.priority.toUpperCase()} · Vence hoy`,
+                timestamp: new Date().toISOString(),
+                type: 'task',
+                read: false,
+                targetId: task.id,
+                targetApp: 'tasks',
+              };
+
+              setNotifications((prev) => [notifItem, ...prev.slice(0, 49)]);
+
+              sendDesktopNotification({
+                title: `📌 Tarea pendiente: ${task.title}`,
+                body: `Prioridad ${task.priority} · Vence hoy`,
+                sound: notificationSettings.soundEnabled,
+                onClick: () => {
+                  setCurrentApp('tasks');
+                  setActiveTab('tasks');
+                  setSelectedTaskForDetail(task);
+                },
+              });
+            }
+          }
+        });
+      }
+    };
+
+    const timeout = setTimeout(checkReminders, 2500);
+    const interval = setInterval(checkReminders, 30000);
+
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
+  }, [
+    notificationSettings.enabled,
+    notificationSettings.soundEnabled,
+    notificationSettings.leadTimeMinutes,
+    notificationSettings.notifyEvents,
+    notificationSettings.notifyTasks,
+    events,
+    tasks,
+  ]);
+
   // Validate Firestore connection on boot
   useEffect(() => {
     testConnection();
@@ -827,8 +1221,23 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           console.warn('Google Tasks scope may need authorization or empty lists:', tasksErr);
         }
       } catch (err: any) {
-        console.error('Error sincronizando con Google Calendar:', err);
-        setGoogleSyncError(err?.message || 'Error al conectar con Google Calendar');
+        const isAuthError =
+          err?.isAuthExpired ||
+          err?.status === 401 ||
+          err?.message === 'TOKEN_EXPIRED' ||
+          err?.message?.includes('401') ||
+          err?.message?.toLowerCase().includes('credential') ||
+          err?.message?.toLowerCase().includes('unauthenticated');
+
+        if (isAuthError) {
+          console.warn('Google Calendar auth token has expired or is invalid. Resetting connection state.');
+          clearStoredAccessToken();
+          setGoogleToken(null);
+          setGoogleSyncError('Tu sesión de Google ha expirado. Haz clic en "Conectar con Google" para renovarla.');
+        } else {
+          console.warn('Error sincronizando con Google Calendar:', err?.message || err);
+          setGoogleSyncError(err?.message || 'Error al conectar con Google Calendar');
+        }
       } finally {
         setIsLoadingGoogle(false);
       }
@@ -1002,6 +1411,19 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     return newEvent;
+  };
+
+  const updateEvent = (eventId: string, updates: Partial<CalendarEvent>) => {
+    setEvents((prev) =>
+      prev.map((e) => (e.id === eventId ? { ...e, ...updates } : e))
+    );
+    if (selectedEventForDetail?.id === eventId) {
+      setSelectedEventForDetail((prev) => (prev ? { ...prev, ...updates } : null));
+    }
+    setToast({
+      id: `toast-${Date.now()}`,
+      message: 'Evento actualizado correctamente',
+    });
   };
 
   const deleteEvent = (eventId: string) => {
@@ -1810,6 +2232,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addCalendar,
         updateCalendarColor,
         addEvent,
+        updateEvent,
         deleteEvent,
         importICS,
         duplicateEventToApp,
@@ -1864,6 +2287,24 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         linkNoteToEvent,
         getNotesForTask,
         getNotesForEvent,
+        habits,
+        addHabit,
+        toggleHabitDate,
+        deleteHabit,
+        isSpotlightOpen,
+        setIsSpotlightOpen,
+        notificationSettings,
+        updateNotificationSettings,
+        notifications,
+        unreadNotificationCount,
+        desktopPermission,
+        requestDesktopPermission,
+        markAllNotificationsAsRead,
+        clearNotifications,
+        deleteNotification,
+        triggerTestNotification,
+        isNotificationCenterOpen,
+        setIsNotificationCenterOpen,
       }}
     >
       {children}

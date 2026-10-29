@@ -133,6 +133,148 @@ Detalles del evento:
   }
 });
 
+// Server-side Gemini AI endpoint for converting emails to structured tasks
+app.post('/api/gemini/parse-email-task', async (req, res) => {
+  try {
+    const { subject, bodyText, sender, date } = req.body;
+
+    if (!subject && !bodyText) {
+      return res.status(400).json({ error: 'El asunto o contenido del correo es requerido.' });
+    }
+
+    if (aiClient) {
+      try {
+        const prompt = `Analiza el siguiente correo electrónico y extráele una tarea accionable concreta para un gestor de proyectos:
+
+Asunto: ${subject || 'Sin asunto'}
+Remitente: ${sender || 'Desconocido'}
+Fecha del correo: ${date || 'Hoy'}
+Contenido:
+"""
+${(bodyText || '').slice(0, 4000)}
+"""
+
+Extrae:
+1. title: Un título directo, en imperativo o acción concreta (máximo 8 palabras en español).
+2. description: Breve descripción contextual de qué se debe realizar y por qué.
+3. priority: "low", "medium" o "high" según la urgencia que exprese el mensaje.
+4. dueDate: Fecha límite sugerida en formato YYYY-MM-DD (si no se menciona explícitamente, calcula entre 1 y 3 días a partir de hoy).
+5. category: Una categoría sugerida (ej. "Trabajo", "Seguimiento", "Urgente", "Revisión", "Cliente").
+6. subtasks: Lista de 2 a 4 pasos o subtareas clave para completar el encargo.
+7. summary: Resumen ejecutivo claro y directo del correo en 1 o 2 frases breves.
+8. intent: "meeting" si trata de agendar o reunirse, "action_required" si exige una tarea, "urgent" si es crítico, o "info" si es meramente informativo.
+9. keyDates: Array de menciones temporales o fechas identificadas en el texto (ej: ["Mañana a las 10:00", "Viernes fin de día"]).
+10. suggestedEvent: Si el correo propone o menciona una reunión/evento, incluye: title, date (YYYY-MM-DD), startTime (HH:mm), durationMinutes (número), y location si aplica.
+11. smartReplies: Lista de 3 opciones cortas de respuesta rápida y profesional en español.`;
+
+        const response = await aiClient.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: prompt,
+          config: {
+            systemInstruction: 'Eres un asistente ejecutivo de alta productividad especializado en analizar correspondencia electrónica y convertirla en acciones estructuradas. Devuelve siempre un JSON válido.',
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING, description: 'Título accionable en español' },
+                description: { type: Type.STRING, description: 'Descripción clara de la tarea' },
+                priority: { type: Type.STRING, description: 'low, medium o high' },
+                dueDate: { type: Type.STRING, description: 'Fecha sugerida en formato YYYY-MM-DD' },
+                category: { type: Type.STRING, description: 'Categoría de la tarea' },
+                subtasks: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING },
+                  description: 'Pasos o subtareas accionables'
+                },
+                summary: { type: Type.STRING, description: 'Resumen en 1-2 frases' },
+                intent: { type: Type.STRING, description: 'meeting, action_required, urgent o info' },
+                keyDates: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING },
+                  description: 'Menciones de fechas'
+                },
+                suggestedEvent: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING },
+                    date: { type: Type.STRING },
+                    startTime: { type: Type.STRING },
+                    durationMinutes: { type: Type.NUMBER },
+                    location: { type: Type.STRING }
+                  }
+                },
+                smartReplies: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING },
+                  description: '3 respuestas rápidas inteligentes'
+                }
+              },
+              required: ['title', 'description', 'priority', 'subtasks']
+            }
+          }
+        });
+
+        const responseText = response.text;
+        if (responseText) {
+          const parsed = JSON.parse(responseText);
+          return res.json({ success: true, data: parsed });
+        }
+      } catch (aiErr: any) {
+        console.warn('Gemini email task parser failed, using heuristic fallback:', aiErr?.message);
+      }
+    }
+
+    // Heuristic fallback
+    const today = new Date();
+    const inTwoDays = new Date(today);
+    inTwoDays.setDate(today.getDate() + 2);
+    const dueDate = inTwoDays.toISOString().split('T')[0];
+
+    const cleanTitle = subject
+      ? subject.replace(/^(re:|fwd:|rv:)\s*/i, '').trim()
+      : 'Seguimiento de correo';
+
+    const isMeeting = /(reunión|meet|llamada|call|sincronización|demo|cita)/i.test(subject + ' ' + (bodyText || ''));
+    const isUrgent = /(urgente|asap|importante|inmediato|crítico)/i.test(subject + ' ' + (bodyText || ''));
+
+    const fallbackTask = {
+      title: isMeeting ? `Reunión: ${cleanTitle}` : `Responder y gestionar: ${cleanTitle}`,
+      description: `Acción derivada del correo de ${sender || 'remitente'}. Revisar solicitud y proceder con la gestión.`,
+      priority: isUrgent ? 'high' : 'medium',
+      dueDate,
+      category: isMeeting ? 'Reunión' : 'Seguimiento',
+      subtasks: [
+        `Revisar detalles en el correo de ${sender || 'contacto'}`,
+        isMeeting ? 'Preparar agenda y puntos a tratar' : 'Preparar respuesta o entregable solicitado',
+        'Confirmar envío y actualizar estado'
+      ],
+      summary: `Correo de ${sender || 'contacto'} sobre "${cleanTitle}". Requiere revisión y seguimiento.`,
+      intent: isUrgent ? 'urgent' : isMeeting ? 'meeting' : 'action_required',
+      keyDates: [dueDate],
+      suggestedEvent: isMeeting ? {
+        title: `Reunión: ${cleanTitle}`,
+        date: dueDate,
+        startTime: '10:00',
+        durationMinutes: 45,
+        location: 'Google Meet / Online'
+      } : undefined,
+      smartReplies: [
+        `Hola ${sender ? sender.split(' ')[0] : ''}, recibido con éxito. Lo reviso de inmediato y te confirmo.`,
+        `Perfecto, estoy de acuerdo con los puntos planteados. Seguimos adelante.`,
+        `Gracias por la actualización. ¿Te parece bien agendar una breve llamada para coordinar?`
+      ]
+    };
+
+    return res.json({ success: true, data: fallbackTask });
+  } catch (error: any) {
+    console.error('Error in parse-email-task handler:', error);
+    return res.status(500).json({
+      error: 'Error procesando el correo',
+      details: error?.message || 'Error desconocido'
+    });
+  }
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });

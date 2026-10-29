@@ -164,9 +164,9 @@ export const MailComposeModal: React.FC<MailComposeModalProps> = ({
               Redactar mensaje · Orion Mail
             </span>
             {isAdmin && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-700/60">
-                <Crown className="w-3 h-3 fill-amber-500 text-amber-600" />
-                <span>Panel de Administrador</span>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-neutral-200/80 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-300/80 dark:border-neutral-700">
+                <Crown className="w-3 h-3 text-neutral-600 dark:text-neutral-400" />
+                <span>Admin</span>
               </span>
             )}
           </div>

@@ -22,6 +22,12 @@ export async function fetchGoogleTaskLists(accessToken: string): Promise<GoogleT
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      const authErr = new Error('TOKEN_EXPIRED');
+      (authErr as any).isAuthExpired = true;
+      (authErr as any).status = 401;
+      throw authErr;
+    }
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error?.message || `Error al obtener listas de Google Tasks: ${res.statusText}`);
   }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Star, X, Mail, CheckCheck, Crown, Image as ImageIcon } from 'lucide-react';
+import { Search, Star, X, Mail, CheckCheck, Crown, Image as ImageIcon, Sparkles, Zap, Calendar } from 'lucide-react';
 import { OrionEmail, MailFolder, isOrionAdmin } from '../../types/mail';
 
 interface MailThreadListProps {
@@ -22,7 +22,7 @@ export const MailThreadList: React.FC<MailThreadListProps> = ({
   onMarkAllAsRead,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterMode, setFilterMode] = useState<'all' | 'unread' | 'starred'>('all');
+  const [filterMode, setFilterMode] = useState<'all' | 'unread' | 'starred' | 'actionable'>('all');
 
   const folderNames: Record<MailFolder, string> = {
     inbox: 'Bandeja de Entrada',
@@ -32,11 +32,29 @@ export const MailThreadList: React.FC<MailThreadListProps> = ({
     trash: 'Papelera',
   };
 
+  const isActionableEmail = (email: OrionEmail) => {
+    const text = `${email.subject} ${email.preview} ${email.body}`.toLowerCase();
+    return (
+      text.includes('reunión') ||
+      text.includes('tarea') ||
+      text.includes('urgente') ||
+      text.includes('asap') ||
+      text.includes('deadline') ||
+      text.includes('fecha límite') ||
+      text.includes('presentación') ||
+      text.includes('entregar') ||
+      text.includes('revisar') ||
+      text.includes('propuesta') ||
+      text.includes('meet')
+    );
+  };
+
   // Filter emails based on search and subfilter
   const filteredEmails = emails.filter((email) => {
     // Subfilter
     if (filterMode === 'unread' && email.isRead) return false;
     if (filterMode === 'starred' && !email.isStarred) return false;
+    if (filterMode === 'actionable' && !isActionableEmail(email)) return false;
 
     // Search query
     if (!searchQuery.trim()) return true;
@@ -96,37 +114,49 @@ export const MailThreadList: React.FC<MailThreadListProps> = ({
           )}
         </div>
 
-        {/* Quick Filter Tabs */}
-        <div className="flex items-center gap-1.5 pt-0.5">
+        {/* Quick Filter Tabs with AI Actionable Filter */}
+        <div className="grid grid-cols-4 gap-0.5 p-0.5 bg-[#efefed] dark:bg-[#222222] rounded-lg text-center">
           <button
             onClick={() => setFilterMode('all')}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+            className={`py-1 rounded-md text-[10.5px] font-medium transition-all cursor-pointer ${
               filterMode === 'all'
-                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-semibold'
-                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white bg-neutral-100 dark:bg-[#242424]'
+                ? 'bg-white dark:bg-[#2e2e2e] text-neutral-900 dark:text-white shadow-2xs font-semibold'
+                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
             }`}
           >
             Todos
           </button>
           <button
             onClick={() => setFilterMode('unread')}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+            className={`py-1 rounded-md text-[10.5px] font-medium transition-all cursor-pointer ${
               filterMode === 'unread'
-                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-semibold'
-                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white bg-neutral-100 dark:bg-[#242424]'
+                ? 'bg-white dark:bg-[#2e2e2e] text-neutral-900 dark:text-white shadow-2xs font-semibold'
+                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
             }`}
           >
             No leídos
           </button>
           <button
             onClick={() => setFilterMode('starred')}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+            className={`py-1 rounded-md text-[10.5px] font-medium transition-all cursor-pointer ${
               filterMode === 'starred'
-                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 font-semibold'
-                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white bg-neutral-100 dark:bg-[#242424]'
+                ? 'bg-white dark:bg-[#2e2e2e] text-neutral-900 dark:text-white shadow-2xs font-semibold'
+                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
             }`}
           >
             Destacados
+          </button>
+          <button
+            onClick={() => setFilterMode('actionable')}
+            title="Mostrar correos con tareas o reuniones detectadas"
+            className={`py-1 rounded-md text-[10.5px] font-medium transition-all cursor-pointer flex items-center justify-center gap-1 ${
+              filterMode === 'actionable'
+                ? 'bg-amber-100/90 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 shadow-2xs font-semibold border border-amber-300/40 shadow-[0_0_10px_rgba(254,240,138,0.3)]'
+                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
+            }`}
+          >
+            <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+            <span>Acciones</span>
           </button>
         </div>
       </div>
@@ -136,7 +166,7 @@ export const MailThreadList: React.FC<MailThreadListProps> = ({
         {filteredEmails.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center p-6 text-center space-y-3">
             <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-[#222222] flex items-center justify-center text-neutral-400 dark:text-neutral-500">
-              <Mail className="w-5 h-5" />
+              <Mail className="w-4 h-4" />
             </div>
             <div>
               <p className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
@@ -151,7 +181,7 @@ export const MailThreadList: React.FC<MailThreadListProps> = ({
             {!searchQuery && folder === 'inbox' && (
               <button
                 onClick={onOpenCompose}
-                className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline pt-1"
+                className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline pt-1 cursor-pointer"
               >
                 Redactar un mensaje nuevo
               </button>
@@ -160,19 +190,21 @@ export const MailThreadList: React.FC<MailThreadListProps> = ({
         ) : (
           filteredEmails.map((email) => {
             const isSelected = selectedEmailId === email.id;
+            const actionable = isActionableEmail(email);
+
             return (
               <div
                 key={email.id}
                 onClick={() => onSelectEmail(email)}
-                className={`p-3.5 transition-all cursor-pointer relative ${
+                className={`px-4 py-3 transition-colors cursor-pointer relative group ${
                   isSelected
-                    ? 'bg-indigo-50/70 dark:bg-indigo-950/30 border-l-3 border-l-indigo-600 dark:border-l-indigo-400'
-                    : 'hover:bg-neutral-50 dark:hover:bg-[#1f1f1f] border-l-3 border-l-transparent'
+                    ? 'bg-neutral-100/90 dark:bg-[#242424]'
+                    : 'hover:bg-neutral-50 dark:hover:bg-[#1d1d1d]'
                 }`}
               >
                 {/* Unread indicator dot */}
                 {!email.isRead && (
-                  <span className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400 absolute top-4 left-1.5" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 absolute top-4 left-1.5" />
                 )}
 
                 <div className="flex items-start justify-between gap-2">
@@ -186,54 +218,61 @@ export const MailThreadList: React.FC<MailThreadListProps> = ({
                     >
                       {email.from.name}
                     </span>
-                    {(email.isAdminOfficial || isOrionAdmin(email.from.email) || email.from.email.includes('orionworkspace')) && (
-                      <span title="Mensaje Oficial del Administrador de Orion">
-                        <Crown className="w-3 h-3 text-amber-500 fill-amber-400 shrink-0" />
-                      </span>
-                    )}
                     {email.source === 'gmail' && (
-                      <span className="shrink-0 text-[9.5px] font-semibold px-1 py-0.2 rounded bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/40">
-                        Gmail
+                      <span className="shrink-0 text-[10px] text-neutral-400 dark:text-neutral-500 font-mono">
+                        · Gmail
                       </span>
                     )}
                     {email.hasImages && (
-                      <span title="Contiene imágenes" className="shrink-0 text-emerald-600 dark:text-emerald-400">
+                      <span title="Contiene imágenes" className="shrink-0 text-neutral-400 dark:text-neutral-500">
                         <ImageIcon className="w-3 h-3" />
                       </span>
                     )}
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[10.5px] tabular-nums text-neutral-400 dark:text-neutral-500">
+                    <span className="text-[11px] font-mono tabular-nums text-neutral-400 dark:text-neutral-500">
                       {formatDate(email.date)}
                     </span>
                     <button
                       onClick={(e) => onToggleStar(email.id, e)}
                       title={email.isStarred ? 'Quitar de destacados' : 'Destacar'}
-                      className="p-1 rounded text-neutral-400 hover:text-amber-500 transition-colors"
+                      className="p-1 rounded text-neutral-400 hover:text-amber-500 transition-colors cursor-pointer"
                     >
                       <Star
                         className={`w-3.5 h-3.5 ${
-                          email.isStarred ? 'fill-amber-400 text-amber-400' : 'text-neutral-400 dark:text-neutral-600'
+                          email.isStarred ? 'fill-amber-400 text-amber-400' : 'text-neutral-300 dark:text-neutral-600'
                         }`}
                       />
                     </button>
                   </div>
                 </div>
 
-                {/* Subject */}
-                <p
-                  className={`text-xs mt-1 truncate ${
-                    !email.isRead
-                      ? 'font-semibold text-neutral-900 dark:text-neutral-100'
-                      : 'text-neutral-700 dark:text-neutral-300'
-                  }`}
-                >
-                  {email.subject}
-                </p>
+                {/* Subject with Actionable Badge */}
+                <div className="flex items-center justify-between gap-1.5 mt-1">
+                  <p
+                    className={`text-xs truncate ${
+                      !email.isRead
+                        ? 'font-semibold text-neutral-900 dark:text-neutral-100'
+                        : 'text-neutral-700 dark:text-neutral-300'
+                    }`}
+                  >
+                    {email.subject}
+                  </p>
+
+                  {actionable && (
+                    <span
+                      title="Contiene posibles tareas o reuniones extraíbles con IA"
+                      className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9.5px] font-medium bg-amber-500/10 text-amber-800 dark:text-amber-200 border border-amber-300/40 shadow-[0_0_8px_rgba(254,240,138,0.25)]"
+                    >
+                      <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+                      <span>Acción</span>
+                    </span>
+                  )}
+                </div>
 
                 {/* Snippet */}
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-2 leading-relaxed">
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-2 leading-relaxed">
                   {email.preview}
                 </p>
               </div>

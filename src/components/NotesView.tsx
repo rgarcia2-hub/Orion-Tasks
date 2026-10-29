@@ -25,6 +25,9 @@ import {
   Heading,
   Code,
   Zap,
+  Download,
+  Printer,
+  X,
 } from 'lucide-react';
 
 const NOTE_COLORS = [
@@ -60,6 +63,8 @@ export const NotesView: React.FC = () => {
   const [selectedTagFilter, setSelectedTagFilter] = useState<string>('all');
   const [isLinkDropdownOpen, setIsLinkDropdownOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [inNoteSearch, setInNoteSearch] = useState('');
+  const [showInNoteSearch, setShowInNoteSearch] = useState(false);
 
   // All unique tags across all notes (excluding any legacy PRO tags)
   const allTags = useMemo(() => {
@@ -129,6 +134,59 @@ export const NotesView: React.FC = () => {
     navigator.clipboard.writeText(`${activeNote.title}\n\n${activeNote.content}`);
     setCopiedId(activeNote.id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  // Checklists in active note
+  const checklistData = useMemo(() => {
+    if (!activeNote || !activeNote.content) return { items: [], completedCount: 0, totalCount: 0, percent: 0 };
+    const lines = activeNote.content.split('\n');
+    const items: { lineIndex: number; text: string; completed: boolean }[] = [];
+
+    lines.forEach((line, idx) => {
+      const match = line.match(/^-\s*\[([ xX])\]\s*(.*)$/);
+      if (match) {
+        items.push({
+          lineIndex: idx,
+          completed: match[1].toLowerCase() === 'x',
+          text: match[2].trim(),
+        });
+      }
+    });
+
+    const totalCount = items.length;
+    const completedCount = items.filter((i) => i.completed).length;
+    const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    return { items, completedCount, totalCount, percent };
+  }, [activeNote]);
+
+  const toggleChecklistItem = (lineIndex: number, currentCompleted: boolean) => {
+    if (!activeNote) return;
+    const lines = activeNote.content.split('\n');
+    if (lines[lineIndex] !== undefined) {
+      const nextMark = currentCompleted ? ' ' : 'x';
+      lines[lineIndex] = lines[lineIndex].replace(/^-\s*\[([ xX])\]/, `- [${nextMark}]`);
+      updateNote(activeNote.id, { content: lines.join('\n') });
+    }
+  };
+
+  const handleExportMarkdown = () => {
+    if (!activeNote) return;
+    const blob = new Blob([`# ${activeNote.title}\n\n${activeNote.content}`], {
+      type: 'text/markdown;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${(activeNote.title || 'nota').replace(/[^a-z0-9áéíóúñ]/gi, '_').toLowerCase()}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportPDF = () => {
+    window.print();
   };
 
   // Convert note to Task in Kanban
@@ -470,6 +528,37 @@ export const NotesView: React.FC = () => {
                     )}
                   </div>
 
+                  {/* In-Editor Search Toggle */}
+                  <button
+                    onClick={() => setShowInNoteSearch((prev) => !prev)}
+                    className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                      showInNoteSearch
+                        ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800'
+                        : 'border-[#e9e9e7] dark:border-[#333] text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
+                    }`}
+                    title="Buscar dentro de la nota"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Export Markdown */}
+                  <button
+                    onClick={handleExportMarkdown}
+                    className="p-1.5 rounded-lg border border-[#e9e9e7] dark:border-[#333] text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer"
+                    title="Exportar como archivo Markdown (.md)"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Export PDF / Print */}
+                  <button
+                    onClick={handleExportPDF}
+                    className="p-1.5 rounded-lg border border-[#e9e9e7] dark:border-[#333] text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer"
+                    title="Exportar a PDF / Imprimir"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                  </button>
+
                   <button
                     onClick={handleCopyNote}
                     className="p-1.5 rounded-lg border border-[#e9e9e7] dark:border-[#333] text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer"
@@ -636,6 +725,91 @@ export const NotesView: React.FC = () => {
                   <span>Convertir en Tarea Kanban</span>
                 </button>
               </div>
+
+              {/* In-Editor Search Bar */}
+              {showInNoteSearch && (
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 text-xs">
+                  <Search className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Buscar texto en esta nota..."
+                    value={inNoteSearch}
+                    onChange={(e) => setInNoteSearch(e.target.value)}
+                    autoFocus
+                    className="flex-1 bg-transparent text-xs text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 outline-none"
+                  />
+                  {inNoteSearch && (
+                    <span className="text-[10.5px] font-mono text-blue-600 dark:text-blue-400">
+                      {(() => {
+                        try {
+                          const count = (activeNote.content.match(new RegExp(inNoteSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')) || []).length;
+                          return `${count} ${count === 1 ? 'coincidencia' : 'coincidencias'}`;
+                        } catch {
+                          return '';
+                        }
+                      })()}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => {
+                      setInNoteSearch('');
+                      setShowInNoteSearch(false);
+                    }}
+                    className="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Interactive Checklists Progress Widget */}
+              {checklistData.totalCount > 0 && (
+                <div className="p-3 rounded-xl bg-[#f8f8f7] dark:bg-[#1a1a1d] border border-neutral-200 dark:border-neutral-800 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                      <CheckSquare className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Lista de verificación interactiva</span>
+                    </span>
+                    <span className="text-[11px] font-mono text-neutral-500">
+                      {checklistData.completedCount} de {checklistData.totalCount} ({checklistData.percent}%)
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                      style={{ width: `${checklistData.percent}%` }}
+                    />
+                  </div>
+                  <div className="space-y-1 pt-1 max-h-36 overflow-y-auto">
+                    {checklistData.items.map((item) => (
+                      <div
+                        key={item.lineIndex}
+                        onClick={() => toggleChecklistItem(item.lineIndex, item.completed)}
+                        className="flex items-center gap-2 p-1 rounded-md hover:bg-neutral-200/50 dark:hover:bg-neutral-800/60 cursor-pointer text-xs select-none"
+                      >
+                        <div
+                          className={`w-3.5 h-3.5 rounded flex items-center justify-center border transition-colors shrink-0 ${
+                            item.completed
+                              ? 'bg-emerald-500 border-emerald-600 text-white'
+                              : 'border-neutral-400 dark:border-neutral-600'
+                          }`}
+                        >
+                          {item.completed && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                        <span
+                          className={`flex-1 truncate ${
+                            item.completed
+                              ? 'line-through text-neutral-400 dark:text-neutral-500'
+                              : 'text-neutral-800 dark:text-neutral-200'
+                          }`}
+                        >
+                          {item.text || '(Elemento sin descripción)'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Note Content Textarea */}
               <div className="relative">

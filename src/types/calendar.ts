@@ -90,3 +90,14 @@ export interface AppNote {
   updatedAt: string;
 }
 
+export interface HabitItem {
+  id: string;
+  title: string;
+  category: string;
+  targetDaysPerWeek: number;
+  completedDates: string[]; // List of YYYY-MM-DD
+  color?: string;
+  streak: number;
+  createdAt: string;
+}
+

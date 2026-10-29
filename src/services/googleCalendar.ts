@@ -26,10 +26,42 @@ provider.setCustomParameters({
 });
 
 const TOKEN_STORAGE_KEY = 'orion_google_access_token_v3';
+const TOKEN_EXPIRY_KEY = 'orion_google_access_token_expiry_v3';
+
+export const isStoredTokenValid = (): boolean => {
+  try {
+    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (!token) return false;
+    const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+    if (expiry) {
+      const expTime = parseInt(expiry, 10);
+      if (!isNaN(expTime) && Date.now() > expTime) {
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const clearStoredAccessToken = () => {
+  cachedAccessToken = null;
+  try {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(TOKEN_EXPIRY_KEY);
+  } catch (e) {
+    console.error(e);
+  }
+};
 
 let isSigningIn = false;
 let cachedAccessToken: string | null = (() => {
   try {
+    if (!isStoredTokenValid()) {
+      clearStoredAccessToken();
+      return null;
+    }
     return localStorage.getItem(TOKEN_STORAGE_KEY);
   } catch {
     return null;
@@ -42,7 +74,10 @@ export const initAuth = (
 ) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
     if (user) {
-      if (!cachedAccessToken) {
+      if (!isStoredTokenValid()) {
+        clearStoredAccessToken();
+        cachedAccessToken = null;
+      } else if (!cachedAccessToken) {
         try {
           cachedAccessToken = localStorage.getItem(TOKEN_STORAGE_KEY);
         } catch {
@@ -51,12 +86,7 @@ export const initAuth = (
       }
       if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
     } else if (!isSigningIn) {
-      cachedAccessToken = null;
-      try {
-        localStorage.removeItem(TOKEN_STORAGE_KEY);
-      } catch (e) {
-        console.error(e);
-      }
+      clearStoredAccessToken();
       if (onAuthFailure) onAuthFailure();
     }
   });
@@ -74,6 +104,8 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     cachedAccessToken = credential.accessToken;
     try {
       localStorage.setItem(TOKEN_STORAGE_KEY, credential.accessToken);
+      // Google access tokens expire in 1 hour; store 55-minute expiry timestamp
+      localStorage.setItem(TOKEN_EXPIRY_KEY, String(Date.now() + 55 * 60 * 1000));
     } catch (e) {
       console.error(e);
     }
@@ -87,6 +119,10 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
+  if (!isStoredTokenValid()) {
+    clearStoredAccessToken();
+    return null;
+  }
   if (!cachedAccessToken) {
     try {
       cachedAccessToken = localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -99,23 +135,32 @@ export const getAccessToken = async (): Promise<string | null> => {
 
 export const googleSignOut = async () => {
   await signOut(auth);
-  cachedAccessToken = null;
-  try {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
-  } catch (e) {
-    console.error(e);
-  }
+  clearStoredAccessToken();
 };
 
 // Fetch real Google Calendars from Google Calendar API
 export async function fetchGoogleCalendars(accessToken: string): Promise<Calendar[]> {
+  if (!accessToken || typeof accessToken !== 'string' || accessToken.trim() === '') {
+    return [];
+  }
+
   const res = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      clearStoredAccessToken();
+      const authErr = new Error('TOKEN_EXPIRED');
+      (authErr as any).isAuthExpired = true;
+      (authErr as any).status = 401;
+      throw authErr;
+    }
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `Error al obtener calendarios: ${res.statusText}`);
+    const message = err.error?.message || `Error al obtener calendarios: ${res.statusText}`;
+    const customErr = new Error(message);
+    (customErr as any).status = res.status;
+    throw customErr;
   }
 
   const data = await res.json();
@@ -162,9 +207,9 @@ export async function fetchGoogleCalendarEvents(
   const items = data.items || [];
 
   return items.map((evt: any) => {
-    const startStr = evt.start?.dateTime || (evt.start?.date ? `${evt.start.date}T09:00:00` : new Date().toISOString());
-    const endStr = evt.end?.dateTime || (evt.end?.date ? `${evt.end.date}T10:00:00` : startStr);
     const isAllDay = !evt.start?.dateTime && Boolean(evt.start?.date);
+    const startStr = evt.start?.dateTime || (evt.start?.date ? `${evt.start.date}T00:00:00` : new Date().toISOString());
+    const endStr = evt.end?.dateTime || (evt.end?.date ? `${evt.end.date}T23:59:59` : startStr);
 
     return {
       id: evt.id || `ge-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,

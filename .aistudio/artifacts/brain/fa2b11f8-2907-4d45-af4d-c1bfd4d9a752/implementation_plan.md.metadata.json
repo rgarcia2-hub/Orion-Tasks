@@ -1,6 +1,6 @@
 {
-  "summary": "Plan de implementación para Orion Mail: cliente de correo híbrido de 3 columnas (Gmail OAuth + Firestore interno), diseño Notion/Proton dark/light, subURL /mail y compositor de correo.",
-  "updatedAt": "2026-10-19T17:07:29.573219935Z",
-  "requestFeedback": true,
-  "userFacing": true
+  "summary":  "Plan de implementación para la actualización integral de Orion Workspace: Spotlight con efecto Apple Liquid Glass, conversión de Correo a Tarea con IA y animación de resplandor (glow), vista de Línea de Tiempo y panel de Hábitos con seguimiento de rachas, mejoras completas en Orion Notes (checklists y exportación PDF/Markdown) y detección de conflictos de calendario con widgets de clima.",
+  "updatedAt":  "2026-10-21T14:02:33.274355473Z",
+  "requestFeedback":  true,
+  "userFacing":  true
 }

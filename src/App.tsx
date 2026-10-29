@@ -20,6 +20,7 @@ import { OrionCalendarApp } from './components/OrionCalendar/OrionCalendarApp';
 import { OrionMailApp } from './components/OrionMail/OrionMailApp';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { TermsOfServiceView } from './components/TermsOfServiceView';
+import { OrionSpotlight } from './components/OrionSpotlight';
 
 function MainLayout() {
   const {
@@ -183,6 +184,7 @@ function MainLayout() {
       </AnimatePresence>
 
       <ToastNotification />
+      <OrionSpotlight />
 
       {/* High-Fidelity Animated App Loading Transition Screen */}
       <AppTransitionScreen

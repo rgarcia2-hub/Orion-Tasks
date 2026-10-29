@@ -25,6 +25,7 @@ import { OrionLogo } from '../OrionLogo';
 import { OrionAppSwitcher } from '../OrionAppSwitcher';
 import { BetaFlaskIcon } from '../BetaFlaskIcon';
 import { GoogleAuthButton } from '../GoogleAuthButton';
+import { OrionNotificationCenter } from '../OrionNotificationCenter';
 import { useCalendar } from '../../context/CalendarContext';
 import { Sun, Moon, Sparkles, RefreshCw, Layers } from 'lucide-react';
 
@@ -412,39 +413,26 @@ export const OrionMailApp: React.FC = () => {
     <div className="h-screen w-screen bg-[#fafafa] dark:bg-[#121212] text-neutral-900 dark:text-neutral-100 flex flex-col overflow-hidden font-sans antialiased">
       {/* Top Bar for Orion Mail - unified with Orion Calendar and Tasks */}
       <header className="h-12 px-4 sm:px-6 border-b border-[#e9e9e7] dark:border-[#2e2e2e] bg-white/95 dark:bg-[#181818]/95 backdrop-blur-md flex items-center justify-between shrink-0 select-none z-30">
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
           <OrionAppSwitcher currentAppName="mail" />
 
-          {/* Small BETA badge with recreated vector flask icon and transparent background */}
-          <div
-            title="Orion Mail está en versión Beta activa"
-            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300 border border-purple-200/90 dark:border-purple-800/80 shadow-2xs select-none"
-          >
-            <BetaFlaskIcon className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-extrabold tracking-wider uppercase">BETA</span>
-          </div>
-
-          <div className="h-4 w-px bg-neutral-300 dark:bg-neutral-700 hidden sm:block" />
-
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-            Buzón Híbrido
-          </span>
-        </div>
-
-        {/* Right tools: Google Account & Dark Mode */}
-        <div className="flex items-center gap-2">
           {isGoogleConnected ? (
-            <div className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Gmail Conectado</span>
+            <div className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-neutral-500 dark:text-neutral-400 font-medium pl-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>Gmail sincronizado</span>
             </div>
           ) : (
-            <div className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium bg-neutral-100 dark:bg-[#252525] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-              <span>Buzón Cloud Activo</span>
+            <div className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 font-medium pl-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-600" />
+              <span>Buzón local</span>
             </div>
           )}
+        </div>
+
+        {/* Right tools: Notifications, Google Account & Dark Mode */}
+        <div className="flex items-center gap-2">
+
+          <OrionNotificationCenter />
 
           <GoogleAuthButton />
 

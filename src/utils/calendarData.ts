@@ -75,11 +75,15 @@ export function parseICSContent(icsText: string, calendarId: string, calendarNam
       } else if (line.startsWith('LOCATION:')) {
         currentEvent.location = line.substring(9).trim().replace(/\\,/g, ',').replace(/\\n/g, '\n');
       } else if (line.startsWith('DTSTART')) {
+        const isAllDay = line.includes('VALUE=DATE') || !line.includes('T');
+        if (isAllDay) currentEvent.isAllDay = true;
         const value = line.split(':')[1];
-        currentEvent.startDateTime = parseICSTimestamp(value);
+        currentEvent.startDateTime = parseICSTimestamp(value, false);
       } else if (line.startsWith('DTEND')) {
+        const isAllDay = line.includes('VALUE=DATE') || !line.includes('T');
+        if (isAllDay) currentEvent.isAllDay = true;
         const value = line.split(':')[1];
-        currentEvent.endDateTime = parseICSTimestamp(value);
+        currentEvent.endDateTime = parseICSTimestamp(value, true);
       } else if (line.startsWith('ATTENDEE')) {
         const emailMatch = line.match(/mailto:([^;:]+)/i);
         const nameMatch = line.match(/CN=([^;:]+)/i);
@@ -98,21 +102,43 @@ export function parseICSContent(icsText: string, calendarId: string, calendarNam
   return events;
 }
 
-function parseICSTimestamp(dtStr: string): string {
+function parseICSTimestamp(dtStr: string, isEnd = false): string {
   if (!dtStr) return new Date().toISOString();
-  if (dtStr.length === 8) {
-    const year = parseInt(dtStr.substring(0, 4), 10);
-    const month = parseInt(dtStr.substring(4, 6), 10) - 1;
-    const day = parseInt(dtStr.substring(6, 8), 10);
-    return new Date(Date.UTC(year, month, day, 9, 0, 0)).toISOString();
+  const cleaned = dtStr.trim();
+  if (cleaned.length === 8) {
+    const year = parseInt(cleaned.substring(0, 4), 10);
+    const month = parseInt(cleaned.substring(4, 6), 10) - 1;
+    const day = parseInt(cleaned.substring(6, 8), 10);
+    return new Date(Date.UTC(year, month, day, isEnd ? 23 : 0, isEnd ? 59 : 0, isEnd ? 59 : 0)).toISOString();
   }
-  const match = dtStr.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
+  const match = cleaned.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
   if (match) {
     const [, y, m, d, hh, mm, ss] = match;
     const date = new Date(Date.UTC(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10), parseInt(hh, 10), parseInt(mm, 10), parseInt(ss, 10)));
     return date.toISOString();
   }
   return new Date().toISOString();
+}
+
+/**
+ * Determines if an event is an all-day or whole-day spanning event.
+ */
+export function isAllDayEvent(evt: CalendarEvent): boolean {
+  if (evt.isAllDay) return true;
+  try {
+    const start = new Date(evt.startDateTime);
+    const end = new Date(evt.endDateTime);
+    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    // Spans 18 hours or more
+    if (durationHours >= 18) return true;
+    // Spans whole calendar day
+    if (start.getHours() === 0 && start.getMinutes() === 0 && (end.getHours() === 23 || end.getHours() === 0)) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
 }
 
 // Formatting helpers

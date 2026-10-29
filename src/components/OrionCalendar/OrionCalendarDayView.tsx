@@ -7,6 +7,7 @@ import {
   formatEventTimeRange,
   formatEventShortTime,
   getCountdownString,
+  isAllDayEvent,
 } from '../../utils/calendarData';
 import {
   Clock,
@@ -94,10 +95,36 @@ export const OrionCalendarDayView: React.FC<OrionCalendarDayViewProps> = ({
           </button>
         </div>
 
+        {/* All Day Events Banner if any exist on this day */}
+        {dayEvents.some(isAllDayEvent) && (
+          <div className="px-4 py-2.5 bg-neutral-50/80 dark:bg-[#232323] border-b border-[#e9e9e7] dark:border-[#2e2e2e] flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mr-1 select-none">
+              Todo el día:
+            </span>
+            {dayEvents.filter(isAllDayEvent).map((evt) => (
+              <div
+                key={evt.id}
+                onClick={() => setSelectedEventForDetail(evt)}
+                className="px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer shadow-2xs border transition-all hover:scale-[1.02] flex items-center gap-1.5"
+                style={{
+                  backgroundColor: `${evt.calendarColor}20`,
+                  borderColor: `${evt.calendarColor}50`,
+                  color: evt.calendarColor,
+                  borderLeftWidth: '3px',
+                  borderLeftColor: evt.calendarColor,
+                }}
+              >
+                <span>{evt.title}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Hourly rows */}
         <div className="flex-1 overflow-y-auto max-h-[calc(100vh-250px)] p-4 space-y-2">
           {HOURS.map((hour) => {
             const hourEvents = dayEvents.filter((evt) => {
+              if (isAllDayEvent(evt)) return false;
               const d = new Date(evt.startDateTime);
               return d.getHours() === hour;
             });

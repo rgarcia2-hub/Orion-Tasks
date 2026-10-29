@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useCalendar } from '../context/CalendarContext';
 import { AppTask, TaskStatus, TaskPriority } from '../types/calendar';
 import { formatEventTimeRange } from '../utils/calendarData';
@@ -23,7 +23,11 @@ import {
   Check,
   GripVertical,
   FileText,
+  Flame,
+  CalendarDays,
 } from 'lucide-react';
+import { HabitsSidebar } from './HabitsSidebar';
+import { TasksTimelineView } from './TasksTimelineView';
 
 export const TasksKanbanView: React.FC = () => {
   const {
@@ -47,9 +51,11 @@ export const TasksKanbanView: React.FC = () => {
     loginWithGoogle,
     getNotesForTask,
     setActiveTab,
+    habits,
   } = useCalendar();
 
-  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'timeline'>('kanban');
+  const [isHabitsOpen, setIsHabitsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<'all' | TaskPriority>('all');
   const [calendarFilter, setCalendarFilter] = useState<string>('all');
@@ -105,12 +111,17 @@ export const TasksKanbanView: React.FC = () => {
     },
   ];
 
+  const maxHabitStreak = useMemo(() => {
+    if (!habits || habits.length === 0) return 0;
+    return Math.max(...habits.map((h) => h.streak || 0));
+  }, [habits]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
-      className="max-w-6xl mx-auto px-6 py-8 space-y-6"
+      className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6"
     >
       {/* View Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#e9e9e7] dark:border-[#2e2e2e]">
@@ -123,29 +134,63 @@ export const TasksKanbanView: React.FC = () => {
           </p>
         </div>
 
-        {/* View Switcher: Kanban vs List */}
-        <div className="flex items-center gap-1 p-1 bg-[#f4f4f2] dark:bg-[#242424] rounded-lg self-start sm:self-center">
+        {/* View Switcher & Habits Toggle */}
+        <div className="flex items-center gap-2 flex-wrap self-start sm:self-center">
+          <div className="flex items-center gap-1 p-1 bg-[#f4f4f2] dark:bg-[#242424] rounded-lg">
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
+                viewMode === 'kanban'
+                  ? 'bg-white dark:bg-[#191919] text-neutral-900 dark:text-neutral-100 shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400'
+              }`}
+            >
+              <Kanban className="w-3.5 h-3.5" />
+              <span>Tablero Kanban</span>
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
+                viewMode === 'list'
+                  ? 'bg-white dark:bg-[#191919] text-neutral-900 dark:text-neutral-100 shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400'
+              }`}
+            >
+              <List className="w-3.5 h-3.5" />
+              <span>Lista</span>
+            </button>
+            <button
+              onClick={() => setViewMode('timeline')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
+                viewMode === 'timeline'
+                  ? 'bg-white dark:bg-[#191919] text-neutral-900 dark:text-neutral-100 shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400'
+              }`}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              <span>Línea de Tiempo</span>
+            </button>
+          </div>
+
+          {/* Lateral Panel Toggle: Strictly named "Hábitos" */}
           <button
-            onClick={() => setViewMode('kanban')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
-              viewMode === 'kanban'
-                ? 'bg-white dark:bg-[#191919] text-neutral-900 dark:text-neutral-100 shadow-xs'
-                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400'
+            onClick={() => setIsHabitsOpen((prev) => !prev)}
+            title="Panel lateral con seguimiento de rachas de Hábitos"
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer border ${
+              isHabitsOpen
+                ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                : 'bg-white dark:bg-[#202020] text-neutral-700 dark:text-neutral-300 border-[#e9e9e7] dark:border-[#2e2e2e] hover:bg-neutral-50 dark:hover:bg-[#252525]'
             }`}
           >
-            <Kanban className="w-3.5 h-3.5" />
-            <span>Tablero Kanban</span>
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
-              viewMode === 'list'
-                ? 'bg-white dark:bg-[#191919] text-neutral-900 dark:text-neutral-100 shadow-xs'
-                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400'
-            }`}
-          >
-            <List className="w-3.5 h-3.5" />
-            <span>Vista de Lista</span>
+            <Flame className={`w-3.5 h-3.5 ${isHabitsOpen ? 'fill-white' : 'fill-amber-500 text-amber-500'}`} />
+            <span>Hábitos</span>
+            {maxHabitStreak > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                isHabitsOpen ? 'bg-amber-600 text-white' : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400'
+              }`}>
+                {maxHabitStreak}d
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -352,8 +397,10 @@ export const TasksKanbanView: React.FC = () => {
         </span>
       </div>
 
-      {/* KANBAN BOARD VIEW WITH MOTION DRAG & DROP ANIMATIONS */}
-      {viewMode === 'kanban' ? (
+      {/* VIEWS CONTAINER (KANBAN / TIMELINE / LIST) + HABITS SIDEBAR */}
+      <div className="flex items-start gap-6">
+        <div className="flex-1 min-w-0">
+          {viewMode === 'kanban' ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           {columns.map((col) => {
             const columnTasks = filteredTasks.filter((t) => t.status === col.id);
@@ -582,6 +629,12 @@ export const TasksKanbanView: React.FC = () => {
             );
           })}
         </div>
+      ) : viewMode === 'timeline' ? (
+        /* TIMELINE VIEW */
+        <TasksTimelineView
+          tasks={filteredTasks}
+          onSelectTask={setSelectedTaskForDetail}
+        />
       ) : (
         /* LIST VIEW */
         <motion.div
@@ -682,6 +735,14 @@ export const TasksKanbanView: React.FC = () => {
           </table>
         </motion.div>
       )}
+        </div>
+
+        {/* Lateral Panel: Strictly named 'Hábitos' */}
+        <HabitsSidebar
+          isOpen={isHabitsOpen}
+          onClose={() => setIsHabitsOpen(false)}
+        />
+      </div>
     </motion.div>
   );
 };

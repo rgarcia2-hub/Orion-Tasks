@@ -208,25 +208,19 @@ export const EmailBodyRenderer: React.FC<EmailBodyRendererProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
         <div className="flex items-center gap-2">
           {hasDetectedImages && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/60">
-              <ImageIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-neutral-500 dark:text-neutral-400">
+              <ImageIcon className="w-3.5 h-3.5 text-neutral-400" />
               <span>
                 {imageCount} {imageCount === 1 ? 'imagen' : 'imágenes'}
               </span>
             </span>
           )}
 
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-neutral-500 dark:text-neutral-400">
+          <span className="inline-flex items-center gap-1 text-[11px] text-neutral-400 dark:text-neutral-500">
             {isHtmlEmail ? (
-              <>
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>Correo HTML original (newsletter / maquetación fiel)</span>
-              </>
+              <span>HTML original</span>
             ) : (
-              <>
-                <Eye className="w-3.5 h-3.5 text-indigo-500" />
-                <span>Formato enriquecido (**negrita**, _cursiva_, imágenes)</span>
-              </>
+              <span>Formato enriquecido</span>
             )}
           </span>
         </div>

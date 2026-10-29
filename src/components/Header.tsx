@@ -3,6 +3,7 @@ import { useCalendar } from '../context/CalendarContext';
 import { GoogleAuthButton } from './GoogleAuthButton';
 import { OrionLogo } from './OrionLogo';
 import { OrionAppSwitcher } from './OrionAppSwitcher';
+import { OrionNotificationCenter } from './OrionNotificationCenter';
 import { motion } from 'motion/react';
 import {
   Calendar as CalendarIcon,
@@ -15,6 +16,7 @@ import {
   FileText,
   LayoutGrid,
   ChevronDown,
+  Search,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -34,6 +36,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewEvent, onOpenImportICS 
     addNote,
     setIsWorkspaceModalOpen,
     setCurrentApp,
+    setIsSpotlightOpen,
   } = useCalendar();
 
   const tabs: {
@@ -117,12 +120,24 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewEvent, onOpenImportICS 
       {/* Zone 3: Google Connect + Utilities */}
       <div className="flex items-center gap-2 shrink-0">
         <button
+          onClick={() => setIsSpotlightOpen(true)}
+          title="Buscar en Orion (Ctrl/Cmd + K)"
+          className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-800 transition-colors cursor-pointer"
+        >
+          <Search className="w-3.5 h-3.5 text-blue-500" />
+          <span className="hidden md:inline text-neutral-400 dark:text-neutral-500 font-normal">Buscar...</span>
+          <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono rounded bg-neutral-200/60 dark:bg-neutral-800 text-neutral-500 border border-neutral-300/40 dark:border-neutral-700">⌘K</kbd>
+        </button>
+
+        <button
           onClick={() => setCurrentApp('hub')}
           title="Orion Workspace Hub · Selector de Aplicaciones"
           className="p-2 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
         >
           <LayoutGrid className="w-4 h-4" />
         </button>
+
+        <OrionNotificationCenter />
 
         <GoogleAuthButton compact />
 

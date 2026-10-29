@@ -6,6 +6,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Health check / connection test probe
+    match /test/connection {
+      allow get: if true;
+    }
+
     function isSignedIn() {
       return request.auth != null;
     }
@@ -26,22 +31,19 @@ service cloud.firestore {
 
       match /tasks/{taskId} {
         allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidId(taskId);
-        allow update: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(taskId);
         allow delete: if isOwner(userId);
       }
 
       match /notes/{noteId} {
         allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidId(noteId);
-        allow update: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(noteId);
         allow delete: if isOwner(userId);
       }
 
       match /emails/{emailId} {
         allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidId(emailId);
-        allow update: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(emailId);
         allow delete: if isOwner(userId);
       }
     }

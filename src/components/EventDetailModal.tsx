@@ -16,6 +16,7 @@ import {
   Trash2,
   ExternalLink,
   Loader2,
+  FileText,
 } from 'lucide-react';
 
 export const EventDetailModal: React.FC = () => {
@@ -26,6 +27,10 @@ export const EventDetailModal: React.FC = () => {
     isClonedInApp,
     deleteEvent,
     setActiveTab,
+    addNote,
+    linkNoteToEvent,
+    setSelectedNoteId,
+    setCurrentApp,
   } = useCalendar();
 
   const [aiLoading, setAiLoading] = useState(false);
@@ -43,6 +48,54 @@ export const EventDetailModal: React.FC = () => {
     const newTask = duplicateEventToApp(event.id, priority, status);
     setSelectedEventForDetail(null);
     setActiveTab('tasks');
+  };
+
+  const handleCreateMeetingNote = () => {
+    const attendeesList = event.attendees && event.attendees.length > 0
+      ? event.attendees.map((a: any) => typeof a === 'string' ? a : a.displayName || a.email).join(', ')
+      : 'No especificados';
+
+    const formattedDate = new Date(event.startDateTime).toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const initialContent = `# Minuta: ${event.title}
+**Fecha:** ${formattedDate}
+**Ubicación/Enlace:** ${event.location || event.meetLink || 'Virtual'}
+**Participantes:** ${attendeesList}
+
+---
+### 📌 Puntos Clave & Agenda
+- [ ] Revisar avances del periodo
+- [ ] Analizar bloqueos y soluciones propuestas
+- [ ] Definir responsables de los entregables
+
+### 📝 Notas de la Reunión
+(Escribe aquí los apuntes y decisiones tomadas durante la sesión...)
+
+### 🎯 Acuerdos y Próximos Pasos
+- [ ] Concretar próximos hitos
+`;
+
+    const newNote = addNote({
+      title: `Minuta: ${event.title}`,
+      content: initialContent,
+      tags: ['Reunión', 'Minuta'],
+      color: event.calendarColor || '#3B82F6',
+      isPinned: false,
+      linkedEventId: event.id,
+    });
+
+    linkNoteToEvent(newNote.id, event.id);
+    setSelectedNoteId(newNote.id);
+    setSelectedEventForDetail(null);
+    setCurrentApp('tasks');
+    setActiveTab('notes');
   };
 
   const handleGenerateAI = async () => {
@@ -265,6 +318,15 @@ export const EventDetailModal: React.FC = () => {
           </button>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleCreateMeetingNote}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-neutral-700 dark:text-neutral-200 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-lg transition-colors cursor-pointer"
+              title="Crear minuta de reunión estructurada en Orion Notes"
+            >
+              <FileText className="w-3.5 h-3.5 text-blue-500" />
+              <span>Crear minuta</span>
+            </button>
+
             {isExpired ? (
               <div className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
                 <Clock className="w-3.5 h-3.5 text-neutral-400" />
@@ -282,15 +344,13 @@ export const EventDetailModal: React.FC = () => {
                 <span>Ver en Flujo de Tareas</span>
               </button>
             ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleDuplicate('pending')}
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 rounded-lg shadow-xs transition-colors cursor-pointer"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Duplicar en la App</span>
-                </button>
-              </div>
+              <button
+                onClick={() => handleDuplicate('pending')}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 rounded-lg shadow-xs transition-colors cursor-pointer"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>Duplicar en la App</span>
+              </button>
             )}
           </div>
         </div>
