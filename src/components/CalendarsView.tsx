@@ -51,6 +51,7 @@ export const CalendarsView: React.FC<CalendarsViewProps> = ({
     googleSyncError,
     updateCalendarColor,
     loginWithGoogle,
+    setUnauthorizedDomainForModal,
   } = useCalendar();
 
   const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('grid');
@@ -150,17 +151,27 @@ export const CalendarsView: React.FC<CalendarsViewProps> = ({
       )}
 
       {googleSyncError && (
-        <div className="p-3 rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="p-3.5 rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-2 min-w-0">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
             <span className="truncate">{googleSyncError}</span>
           </div>
-          <button
-            onClick={loginWithGoogle}
-            className="self-start sm:self-center px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer shrink-0 shadow-2xs"
-          >
-            Conectar con Google
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+            {googleSyncError.includes('autorizado') && (
+              <button
+                onClick={() => setUnauthorizedDomainForModal(typeof window !== 'undefined' ? window.location.hostname : 'orionworkspace.vercel.app')}
+                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white dark:bg-[#252525] border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 hover:bg-rose-100/70 transition-colors cursor-pointer shadow-2xs"
+              >
+                ¿Cómo autorizar dominio?
+              </button>
+            )}
+            <button
+              onClick={loginWithGoogle}
+              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer shadow-2xs"
+            >
+              Reintentar
+            </button>
+          </div>
         </div>
       )}
 

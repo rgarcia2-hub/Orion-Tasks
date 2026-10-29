@@ -103,15 +103,15 @@ export const OrionWorkspaceHub: React.FC = () => {
       id: 'drive',
       name: 'Drive',
       fullName: 'Orion Drive',
-      isAvailable: false,
-      badge: 'Soon',
-      description: 'Almacenamiento en la nube y gestión de archivos',
+      isAvailable: true,
+      badge: 'Nuevo',
+      description: 'Almacenamiento en la nube, visor multimedia y gestión de archivos',
       icon: (
         <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center text-white shadow-sm transition-transform duration-200 group-hover:scale-105">
           <HardDrive className="w-6 h-6" />
         </div>
       ),
-      action: () => showToast('Orion Drive estará disponible próximamente en Orion Workspace.'),
+      action: () => navigateToApp('drive'),
     },
   ];
 

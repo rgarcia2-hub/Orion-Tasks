@@ -18,9 +18,11 @@ import { OrionWorkspaceHub } from './components/OrionWorkspaceHub';
 import { AppTransitionScreen } from './components/AppTransitionScreen';
 import { OrionCalendarApp } from './components/OrionCalendar/OrionCalendarApp';
 import { OrionMailApp } from './components/OrionMail/OrionMailApp';
+import { OrionDriveApp } from './components/OrionDrive/OrionDriveApp';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { TermsOfServiceView } from './components/TermsOfServiceView';
 import { OrionSpotlight } from './components/OrionSpotlight';
+import { OrionDomainAuthModal } from './components/OrionDomainAuthModal';
 
 function MainLayout() {
   const {
@@ -32,6 +34,8 @@ function MainLayout() {
     isAppTransitioning,
     transitionTarget,
     transitionProgress,
+    unauthorizedDomainForModal,
+    setUnauthorizedDomainForModal,
   } = useCalendar();
 
   const [isNewEventOpen, setIsNewEventOpen] = useState(false);
@@ -79,6 +83,17 @@ function MainLayout() {
             className="w-full"
           >
             <OrionCalendarApp />
+          </motion.div>
+        ) : currentApp === 'drive' ? (
+          <motion.div
+            key="drive-screen"
+            initial={{ opacity: 0, scale: 0.995 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.995 }}
+            transition={{ duration: 0.28, ease: 'easeInOut' }}
+            className="w-full h-screen"
+          >
+            <OrionDriveApp />
           </motion.div>
         ) : currentApp === 'privacy' ? (
           <motion.div
@@ -191,6 +206,13 @@ function MainLayout() {
         isOpen={isAppTransitioning}
         targetApp={transitionTarget}
         progress={transitionProgress}
+      />
+
+      {/* Domain Authorization Guidance Modal */}
+      <OrionDomainAuthModal
+        isOpen={Boolean(unauthorizedDomainForModal)}
+        onClose={() => setUnauthorizedDomainForModal(null)}
+        domain={unauthorizedDomainForModal || undefined}
       />
     </>
   );

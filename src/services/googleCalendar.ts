@@ -112,6 +112,15 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
     console.error('Error durante el inicio de sesión con Google:', error);
+    if (
+      error?.code === 'auth/unauthorized-domain' ||
+      error?.message?.includes('unauthorized-domain') ||
+      error?.message?.includes('not authorized')
+    ) {
+      error.isUnauthorizedDomain = true;
+      error.unauthorizedHost = typeof window !== 'undefined' ? window.location.hostname : 'orionworkspace.vercel.app';
+      error.friendlyMessage = `El dominio "${error.unauthorizedHost}" no está autorizado en Firebase Authentication. Añádelo en la consola de Firebase.`;
+    }
     throw error;
   } finally {
     isSigningIn = false;

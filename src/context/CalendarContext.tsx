@@ -57,6 +57,8 @@ interface CalendarContextType {
   isGoogleConnected: boolean;
   isLoadingGoogle: boolean;
   googleSyncError: string | null;
+  unauthorizedDomainForModal: string | null;
+  setUnauthorizedDomainForModal: (domain: string | null) => void;
   loginWithGoogle: () => Promise<void>;
   logoutGoogle: () => Promise<void>;
   refreshGoogleData: () => Promise<void>;
@@ -158,11 +160,11 @@ interface CalendarContextType {
   // Orion Workspace state
   isWorkspaceModalOpen: boolean;
   setIsWorkspaceModalOpen: (open: boolean) => void;
-  currentApp: 'hub' | 'tasks' | 'calendar' | 'mail' | 'privacy' | 'terms';
-  setCurrentApp: (app: 'hub' | 'tasks' | 'calendar' | 'mail' | 'privacy' | 'terms', options?: { immediate?: boolean }) => void;
-  navigateToApp: (app: 'hub' | 'tasks' | 'calendar' | 'mail' | 'privacy' | 'terms', options?: { immediate?: boolean }) => void;
+  currentApp: 'hub' | 'tasks' | 'calendar' | 'mail' | 'drive' | 'privacy' | 'terms';
+  setCurrentApp: (app: 'hub' | 'tasks' | 'calendar' | 'mail' | 'drive' | 'privacy' | 'terms', options?: { immediate?: boolean }) => void;
+  navigateToApp: (app: 'hub' | 'tasks' | 'calendar' | 'mail' | 'drive' | 'privacy' | 'terms', options?: { immediate?: boolean }) => void;
   isAppTransitioning: boolean;
-  transitionTarget: 'hub' | 'tasks' | 'calendar' | 'mail' | 'privacy' | 'terms' | null;
+  transitionTarget: 'hub' | 'tasks' | 'calendar' | 'mail' | 'drive' | 'privacy' | 'terms' | null;
   transitionProgress: number;
 
   upcomingEventsList: CalendarEvent[];
@@ -570,9 +572,10 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
   const [googleSyncError, setGoogleSyncError] = useState<string | null>(null);
+  const [unauthorizedDomainForModal, setUnauthorizedDomainForModal] = useState<string | null>(null);
 
-  // Helper to determine initial app based on URL path (/mail, /calendar, /tasks, /privacy, /terms, /)
-  const getInitialApp = (): 'hub' | 'tasks' | 'calendar' | 'mail' | 'privacy' | 'terms' => {
+  // Helper to determine initial app based on URL path (/mail, /calendar, /tasks, /drive, /privacy, /terms, /)
+  const getInitialApp = (): 'hub' | 'tasks' | 'calendar' | 'mail' | 'drive' | 'privacy' | 'terms' => {
     if (typeof window !== 'undefined') {
       const pathname = window.location.pathname.toLowerCase();
       if (
@@ -592,6 +595,9 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       ) {
         return 'terms';
       }
+      if (pathname === '/drive' || pathname === '/drive/' || pathname.startsWith('/drive')) {
+        return 'drive';
+      }
       if (pathname === '/mail' || pathname === '/mail/' || pathname.startsWith('/mail')) {
         return 'mail';
       }
@@ -607,9 +613,9 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Orion Workspace state
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
-  const [currentApp, setCurrentAppState] = useState<'hub' | 'tasks' | 'calendar' | 'mail' | 'privacy' | 'terms'>(getInitialApp);
+  const [currentApp, setCurrentAppState] = useState<'hub' | 'tasks' | 'calendar' | 'mail' | 'drive' | 'privacy' | 'terms'>(getInitialApp);
   const [isAppTransitioning, setIsAppTransitioning] = useState<boolean>(false);
-  const [transitionTarget, setTransitionTarget] = useState<'hub' | 'tasks' | 'calendar' | 'mail' | 'privacy' | 'terms' | null>(null);
+  const [transitionTarget, setTransitionTarget] = useState<'hub' | 'tasks' | 'calendar' | 'mail' | 'drive' | 'privacy' | 'terms' | null>(null);
   const [transitionProgress, setTransitionProgress] = useState<number>(0);
 
   // Sync with browser URL / history (popstate forward & back)
@@ -617,7 +623,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const syncWithUrl = () => {
       if (typeof window === 'undefined') return;
       const pathname = window.location.pathname.toLowerCase();
-      const target: 'hub' | 'tasks' | 'calendar' | 'mail' | 'privacy' | 'terms' =
+      const target: 'hub' | 'tasks' | 'calendar' | 'mail' | 'drive' | 'privacy' | 'terms' =
         pathname === '/privacy' ||
         pathname === '/privacy-policy' ||
         pathname.includes('privacidad') ||
@@ -629,6 +635,8 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             pathname.includes('terminos') ||
             pathname.includes('terms')
           ? 'terms'
+          : pathname === '/drive' || pathname === '/drive/' || pathname.startsWith('/drive')
+          ? 'drive'
           : pathname === '/mail' || pathname === '/mail/' || pathname.startsWith('/mail')
           ? 'mail'
           : pathname === '/calendar' || pathname === '/calendar/' || pathname.startsWith('/calendar')
@@ -649,6 +657,8 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             ? 'Orion Calendar · Calendario Unificado'
             : target === 'mail'
             ? 'Orion Mail · Correo & Bandeja Unificada'
+            : target === 'drive'
+            ? 'Orion Drive · Almacenamiento & Archivos Cloud'
             : 'Orion Workspace';
       }
     };
@@ -660,7 +670,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Smooth animated transition and URL updater
   const navigateToApp = useCallback(
-    (target: 'hub' | 'tasks' | 'calendar' | 'mail' | 'privacy' | 'terms', options?: { immediate?: boolean }) => {
+    (target: 'hub' | 'tasks' | 'calendar' | 'mail' | 'drive' | 'privacy' | 'terms', options?: { immediate?: boolean }) => {
       const targetPath =
         target === 'tasks'
           ? '/tasks'
@@ -668,6 +678,8 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           ? '/calendar'
           : target === 'mail'
           ? '/mail'
+          : target === 'drive'
+          ? '/drive'
           : target === 'privacy'
           ? '/privacy'
           : target === 'terms'
@@ -691,6 +703,8 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               ? 'Orion Calendar · Calendario Unificado'
               : target === 'mail'
               ? 'Orion Mail · Correo & Bandeja Unificada'
+              : target === 'drive'
+              ? 'Orion Drive · Almacenamiento & Archivos Cloud'
               : 'Orion Workspace';
         }
         return;
@@ -702,7 +716,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setTransitionTarget(target);
       setTransitionProgress(15);
 
-      // Update URL immediately so browser reflects /calendar, /mail, /tasks, or /
+      // Update URL immediately so browser reflects /calendar, /mail, /drive, /tasks, or /
       if (typeof window !== 'undefined' && window.location.pathname !== targetPath) {
         window.history.pushState({ app: target }, '', targetPath);
       }
@@ -714,6 +728,8 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             ? 'Orion Calendar · Calendario Unificado'
             : target === 'mail'
             ? 'Orion Mail · Correo & Bandeja Unificada'
+            : target === 'drive'
+            ? 'Orion Drive · Almacenamiento & Archivos Cloud'
             : 'Orion Workspace';
       }
 
@@ -742,7 +758,7 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 
   const setCurrentApp = useCallback(
-    (app: 'hub' | 'tasks' | 'calendar' | 'mail' | 'privacy' | 'terms', options?: { immediate?: boolean }) => {
+    (app: 'hub' | 'tasks' | 'calendar' | 'mail' | 'drive' | 'privacy' | 'terms', options?: { immediate?: boolean }) => {
       navigateToApp(app, options);
     },
     [navigateToApp]
@@ -1315,7 +1331,27 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setIsWorkspaceModalOpen(true);
       }
     } catch (err: any) {
-      setGoogleSyncError(err?.message || 'Error durante el inicio de sesión con Google');
+      const isUnauthDomain =
+        err?.code === 'auth/unauthorized-domain' ||
+        err?.isUnauthorizedDomain ||
+        err?.message?.includes('unauthorized-domain') ||
+        err?.message?.includes('not authorized');
+
+      if (isUnauthDomain) {
+        const domain =
+          err?.unauthorizedHost ||
+          (typeof window !== 'undefined' ? window.location.hostname : 'orionworkspace.vercel.app');
+        setUnauthorizedDomainForModal(domain);
+        setGoogleSyncError(
+          `Dominio no autorizado (${domain}). Añade este dominio a la lista de Dominios Autorizados en la consola de Firebase Authentication.`
+        );
+      } else if (err?.code === 'auth/popup-closed-by-user') {
+        setGoogleSyncError('Se cerró la ventana emergente antes de completar el inicio de sesión.');
+      } else if (err?.code === 'auth/popup-blocked') {
+        setGoogleSyncError('El navegador bloqueó la ventana emergente. Por favor permite los popups para este sitio.');
+      } else {
+        setGoogleSyncError(err?.friendlyMessage || err?.message || 'Error durante el inicio de sesión con Google');
+      }
     } finally {
       setIsLoadingGoogle(false);
     }
@@ -2205,6 +2241,8 @@ export const CalendarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isGoogleConnected: Boolean(user && googleToken),
         isLoadingGoogle,
         googleSyncError,
+        unauthorizedDomainForModal,
+        setUnauthorizedDomainForModal,
         loginWithGoogle,
         logoutGoogle,
         refreshGoogleData,

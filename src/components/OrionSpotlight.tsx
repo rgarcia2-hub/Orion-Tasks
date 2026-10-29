@@ -17,6 +17,7 @@ import {
   LayoutGrid,
   CornerDownLeft,
   Tag,
+  HardDrive,
 } from 'lucide-react';
 import { AppTask, CalendarEvent, AppNote, HabitItem } from '../types/calendar';
 
@@ -137,6 +138,18 @@ export const OrionSpotlight: React.FC = () => {
       run: () => {
         setCurrentApp('tasks');
         setActiveTab('notes');
+        setIsSpotlightOpen(false);
+      },
+    },
+    {
+      id: 'app-drive',
+      type: 'action',
+      title: 'Ir a Orion Drive',
+      subtitle: 'Almacenamiento en la nube, visor multimedia y archivos',
+      category: 'Acciones Rápidas',
+      icon: <HardDrive className="w-4 h-4 text-violet-500" />,
+      run: () => {
+        setCurrentApp('drive');
         setIsSpotlightOpen(false);
       },
     },
@@ -311,6 +324,31 @@ export const OrionSpotlight: React.FC = () => {
         });
       }
     });
+
+    // Search Drive Files
+    try {
+      const rawDrive = localStorage.getItem('orion_drive_files_v2');
+      if (rawDrive) {
+        const driveFiles = JSON.parse(rawDrive);
+        driveFiles.forEach((df: any) => {
+          if (!df.isTrash && (df.name?.toLowerCase().includes(q) || df.extension?.toLowerCase().includes(q))) {
+            results.push({
+              id: `drive-${df.id}`,
+              type: 'drive',
+              title: df.name,
+              subtitle: `Archivo · ${df.extension.toUpperCase()} (${(df.size / 1024).toFixed(0)} KB)`,
+              category: 'Orion Drive',
+              icon: <HardDrive className="w-4 h-4 text-violet-500" />,
+              data: df,
+              run: () => {
+                setCurrentApp('drive');
+                setIsSpotlightOpen(false);
+              },
+            });
+          }
+        });
+      }
+    } catch {}
 
     return results;
   }, [

@@ -16,6 +16,7 @@ import {
   FileText,
   User,
   Mail,
+  HardDrive,
 } from 'lucide-react';
 
 interface OrionWorkspaceModalProps {
@@ -36,6 +37,8 @@ export const OrionWorkspaceModal: React.FC<OrionWorkspaceModalProps> = ({ isOpen
     events,
     currentApp,
     setCurrentApp,
+    googleSyncError,
+    setUnauthorizedDomainForModal,
   } = useCalendar();
 
   if (!isOpen) return null;
@@ -147,28 +150,52 @@ export const OrionWorkspaceModal: React.FC<OrionWorkspaceModalProps> = ({ isOpen
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
-                      Cuenta de Google no conectada
-                    </p>
-                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                      Inicia sesión para sincronizar calendarios, tareas y notas en tu cuenta.
-                    </p>
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
+                        Cuenta de Google no conectada
+                      </p>
+                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                        Inicia sesión para sincronizar calendarios, tareas y notas en tu cuenta.
+                      </p>
+                    </div>
+                    <button
+                      onClick={loginWithGoogle}
+                      disabled={isLoadingGoogle}
+                      className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-neutral-900 dark:text-neutral-100 bg-white dark:bg-[#1a1a1a] hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg shadow-2xs transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 48 48">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                      </svg>
+                      <span>Conectar Google</span>
+                    </button>
                   </div>
-                  <button
-                    onClick={loginWithGoogle}
-                    disabled={isLoadingGoogle}
-                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-neutral-900 dark:text-neutral-100 bg-white dark:bg-[#1a1a1a] hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg shadow-2xs transition-all cursor-pointer whitespace-nowrap"
-                  >
-                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 48 48">
-                      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-                      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-                      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
-                      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
-                    </svg>
-                    <span>Conectar Google</span>
-                  </button>
+
+                  {googleSyncError && (
+                    <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-[11px] flex items-center justify-between gap-2">
+                      <span className="truncate">{googleSyncError}</span>
+                      <button
+                        onClick={() => setUnauthorizedDomainForModal(typeof window !== 'undefined' ? window.location.hostname : 'orionworkspace.vercel.app')}
+                        className="text-[10px] font-semibold text-rose-800 dark:text-rose-200 underline shrink-0 cursor-pointer"
+                      >
+                        Autorizar dominio
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-800 flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
+                    <span>¿Desplegando en Vercel u otro dominio?</span>
+                    <button
+                      onClick={() => setUnauthorizedDomainForModal(typeof window !== 'undefined' ? window.location.hostname : 'orionworkspace.vercel.app')}
+                      className="text-violet-600 dark:text-violet-400 hover:underline font-semibold cursor-pointer"
+                    >
+                      Ver dominios autorizados →
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -334,6 +361,58 @@ export const OrionWorkspaceModal: React.FC<OrionWorkspaceModalProps> = ({ isOpen
                     className="px-3 py-1 rounded-md text-xs font-semibold text-purple-700 bg-purple-100/80 hover:bg-purple-200/80 dark:text-purple-300 dark:bg-purple-950/80 dark:hover:bg-purple-900 transition-colors cursor-pointer"
                   >
                     {currentApp === 'mail' ? 'Volver a la App' : 'Abrir Mail'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Orion Drive App Card */}
+              <div className={`p-4 rounded-xl border transition-all ${
+                currentApp === 'drive'
+                  ? 'border-2 border-violet-500/60 bg-gradient-to-br from-violet-50/50 via-white to-fuchsia-50/30 dark:from-violet-950/20 dark:via-[#222222] dark:to-fuchsia-950/10 shadow-xs'
+                  : 'border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-[#232323] hover:border-violet-300'
+              }`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                      <HardDrive className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                          Orion Drive
+                        </h3>
+                        {currentApp === 'drive' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+                            <CheckCircle2 className="w-3 h-3" />
+                            En uso
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/60">
+                            /drive
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                        Almacenamiento seguro en la nube, visor multimedia, previsualización de documentos y carga rápida.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3.5 pt-3 border-t border-neutral-100 dark:border-neutral-800/80 flex items-center justify-between text-[11px]">
+                  <span className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
+                    <HardDrive className="w-3 h-3 text-violet-500" />
+                    100 GB cuota cloud
+                  </span>
+
+                  <button
+                    onClick={() => {
+                      onClose();
+                      setCurrentApp('drive');
+                    }}
+                    className="px-3 py-1 rounded-md text-xs font-semibold text-violet-700 bg-violet-100/80 hover:bg-violet-200/80 dark:text-violet-300 dark:bg-violet-950/80 dark:hover:bg-violet-900 transition-colors cursor-pointer"
+                  >
+                    {currentApp === 'drive' ? 'Volver a la App' : 'Abrir Drive'}
                   </button>
                 </div>
               </div>

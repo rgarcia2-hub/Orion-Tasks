@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 interface OrionAppSwitcherProps {
-  currentAppName?: 'tasks' | 'calendar' | 'mail';
+  currentAppName?: 'tasks' | 'calendar' | 'mail' | 'drive';
 }
 
 export const OrionAppSwitcher: React.FC<OrionAppSwitcherProps> = ({ currentAppName }) => {
@@ -92,12 +92,12 @@ export const OrionAppSwitcher: React.FC<OrionAppSwitcherProps> = ({ currentAppNa
       id: 'drive' as const,
       name: 'Orion Drive',
       subUrl: '/drive',
-      description: 'Almacenamiento seguro en la nube',
-      isActive: false,
-      isAvailable: false,
-      badge: 'Soon',
+      description: 'Almacenamiento seguro en la nube y visor multimedia',
+      isActive: currentAppName === 'drive',
+      isAvailable: true,
+      badge: 'Nuevo',
       icon: (
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white flex items-center justify-center shrink-0 shadow-xs opacity-70">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white flex items-center justify-center shrink-0 shadow-xs">
           <HardDrive className="w-4.5 h-4.5" />
         </div>
       ),
@@ -136,12 +136,16 @@ export const OrionAppSwitcher: React.FC<OrionAppSwitcherProps> = ({ currentAppNa
           <div className="w-4 h-4 rounded-sm bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white shadow-2xs">
             <Mail className="w-2.5 h-2.5" />
           </div>
+        ) : currentAppName === 'drive' ? (
+          <div className="w-4 h-4 rounded-sm bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center text-white shadow-2xs">
+            <HardDrive className="w-2.5 h-2.5" />
+          </div>
         ) : (
           <div className="w-4 h-4 rounded-sm bg-neutral-900 dark:bg-neutral-100 flex items-center justify-center text-white dark:text-neutral-900 shadow-2xs">
             <CalendarIcon className="w-2.5 h-2.5" />
           </div>
         )}
-        <span className="capitalize">{currentAppName === 'calendar' ? 'Calendar' : currentAppName === 'mail' ? 'Mail' : 'Tasks'}</span>
+        <span className="capitalize">{currentAppName === 'calendar' ? 'Calendar' : currentAppName === 'mail' ? 'Mail' : currentAppName === 'drive' ? 'Drive' : 'Tasks'}</span>
         <ChevronDown className={`w-3 h-3 text-neutral-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
@@ -178,6 +182,7 @@ export const OrionAppSwitcher: React.FC<OrionAppSwitcherProps> = ({ currentAppNa
                     if (app.id === 'tasks') setCurrentApp('tasks');
                     if (app.id === 'calendar') setCurrentApp('calendar');
                     if (app.id === 'mail') setCurrentApp('mail');
+                    if (app.id === 'drive') setCurrentApp('drive');
                   }}
                   className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all ${
                     app.isActive

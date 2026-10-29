@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { OrionLogo } from './OrionLogo';
-import { Calendar as CalendarIcon, CalendarDays, Mail, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, CalendarDays, Mail, Sparkles, HardDrive } from 'lucide-react';
 
 interface AppTransitionScreenProps {
   isOpen: boolean;
-  targetApp: 'hub' | 'tasks' | 'calendar' | 'mail' | 'privacy' | 'terms' | null;
+  targetApp: 'hub' | 'tasks' | 'calendar' | 'mail' | 'drive' | 'privacy' | 'terms' | null;
   progress?: number;
 }
 
@@ -17,8 +17,14 @@ export const AppTransitionScreen: React.FC<AppTransitionScreenProps> = ({
   const isTasks = targetApp === 'tasks';
   const isCalendar = targetApp === 'calendar';
   const isMail = targetApp === 'mail';
+  const isDrive = targetApp === 'drive';
 
   const getSubtext = () => {
+    if (isDrive) {
+      if (progress < 40) return 'Conectando con Orion Cloud Storage...';
+      if (progress < 80) return 'Sincronizando carpetas y archivos locales...';
+      return 'Abriendo Orion Drive...';
+    }
     if (isMail) {
       if (progress < 40) return 'Conectando con bandejas de correo y Gmail...';
       if (progress < 80) return 'Sincronizando mensajes y borradores de Firestore...';
@@ -39,6 +45,7 @@ export const AppTransitionScreen: React.FC<AppTransitionScreenProps> = ({
   };
 
   const getSubUrl = () => {
+    if (isDrive) return '/drive';
     if (isMail) return '/mail';
     if (isCalendar) return '/calendar';
     if (isTasks) return '/tasks';
@@ -46,6 +53,7 @@ export const AppTransitionScreen: React.FC<AppTransitionScreenProps> = ({
   };
 
   const getTitle = () => {
+    if (isDrive) return 'Abriendo Orion Drive';
     if (isMail) return 'Abriendo Orion Mail';
     if (isCalendar) return 'Abriendo Orion Calendar';
     if (isTasks) return 'Abriendo Orion Tasks';
@@ -86,7 +94,16 @@ export const AppTransitionScreen: React.FC<AppTransitionScreenProps> = ({
                 className="absolute -inset-3 rounded-3xl border border-dashed border-indigo-400/40 dark:border-indigo-400/30"
               />
 
-              {isMail ? (
+              {isDrive ? (
+                <motion.div
+                  initial={{ scale: 0.8, rotate: -4 }}
+                  animate={{ scale: [0.95, 1.05, 1], rotate: [0, 2, 0] }}
+                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                  className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center text-white shadow-xl ring-4 ring-violet-500/20"
+                >
+                  <HardDrive className="w-9 h-9" />
+                </motion.div>
+              ) : isMail ? (
                 <motion.div
                   initial={{ scale: 0.8, rotate: -4 }}
                   animate={{ scale: [0.95, 1.05, 1], rotate: [0, 2, 0] }}
