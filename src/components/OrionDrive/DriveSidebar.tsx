@@ -235,13 +235,13 @@ export const DriveSidebar: React.FC<DriveSidebarProps> = ({
             <div className="w-full h-2 rounded-full bg-neutral-100 dark:bg-[#2b2b2b] overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
-                animate={{ width: `${Math.max(12, usedPercent)}%` }}
+                animate={{ width: `${Math.min(100, Math.max(totalBytesUsed > 0 ? 3 : 0, usedPercent))}%` }}
                 transition={{ duration: 0.8, ease: 'easeOut' }}
                 className="h-full bg-gradient-to-r from-violet-500 via-indigo-500 to-fuchsia-500 rounded-full"
               />
             </div>
             <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400 font-mono">
-              <span>{FORMAT_FILE_SIZE(totalBytesUsed + 14800000000)}</span>
+              <span>{FORMAT_FILE_SIZE(totalBytesUsed)}</span>
               <span>100 GB</span>
             </div>
           </div>

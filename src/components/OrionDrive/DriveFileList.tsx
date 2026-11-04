@@ -30,6 +30,8 @@ interface DriveFileListProps {
   onToggleSelectFile: (fileId: string) => void;
   onSelectAll: () => void;
   isAllSelected: boolean;
+  onContextMenuFolder?: (e: React.MouseEvent, folder: DriveFolder) => void;
+  onContextMenuFile?: (e: React.MouseEvent, file: DriveFile) => void;
 }
 
 export const DriveFileList: React.FC<DriveFileListProps> = ({
@@ -46,6 +48,8 @@ export const DriveFileList: React.FC<DriveFileListProps> = ({
   onToggleSelectFile,
   onSelectAll,
   isAllSelected,
+  onContextMenuFolder,
+  onContextMenuFile,
 }) => {
   const getFileCategoryIcon = (file: DriveFile) => {
     switch (file.category) {
@@ -94,6 +98,11 @@ export const DriveFileList: React.FC<DriveFileListProps> = ({
             <tr
               key={folder.id}
               onClick={() => onOpenFolder(folder.id)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onContextMenuFolder?.(e, folder);
+              }}
               className="group hover:bg-neutral-50/80 dark:hover:bg-[#252525]/60 transition-colors cursor-pointer"
             >
               <td className="py-2.5 px-3 text-center">
@@ -156,6 +165,11 @@ export const DriveFileList: React.FC<DriveFileListProps> = ({
               <tr
                 key={file.id}
                 onClick={() => onOpenFilePreview(file)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onContextMenuFile?.(e, file);
+                }}
                 className={`group hover:bg-neutral-50/80 dark:hover:bg-[#252525]/60 transition-colors cursor-pointer ${
                   isSelected ? 'bg-violet-50/70 dark:bg-violet-950/25' : ''
                 }`}

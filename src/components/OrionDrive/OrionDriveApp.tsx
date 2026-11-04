@@ -8,6 +8,8 @@ import { DriveFileList } from './DriveFileList';
 import { DriveFilePreviewModal } from './DriveFilePreviewModal';
 import { DriveNewFolderModal } from './DriveNewFolderModal';
 import { DriveStorageModal } from './DriveStorageModal';
+import { DriveContextMenu, ContextMenuTarget } from './DriveContextMenu';
+import { DriveRenameModal } from './DriveRenameModal';
 import {
   DriveFile,
   DriveFolder,
@@ -20,6 +22,8 @@ import {
   INITIAL_FOLDERS,
   GET_FILE_CATEGORY,
 } from './DriveTypes';
+import { useCalendar } from '../../context/CalendarContext';
+import { OrionAppSwitcher } from '../OrionAppSwitcher';
 import {
   UploadCloud,
   FolderOpen,
@@ -29,41 +33,79 @@ import {
   Sparkles,
   CheckCircle2,
   ArrowLeft,
+  Lock,
+  Cloud,
+  ShieldCheck,
+  HardDrive,
+  AlertCircle,
+  Loader2,
+  ArrowRight,
 } from 'lucide-react';
 
-const STORAGE_KEY_FILES = 'orion_drive_files_v2';
-const STORAGE_KEY_FOLDERS = 'orion_drive_folders_v2';
-
 export const OrionDriveApp: React.FC = () => {
-  // Load saved state or initial mock seed
+  const {
+    user,
+    loginWithGoogle,
+    isLoadingGoogle,
+    googleSyncError,
+    setCurrentApp,
+    setUnauthorizedDomainForModal,
+  } = useCalendar();
+
+  // Load saved state or start completely empty
   const [folders, setFolders] = useState<DriveFolder[]>(() => {
+    if (!user) return [];
     try {
-      const saved = localStorage.getItem(STORAGE_KEY_FOLDERS);
+      const saved = localStorage.getItem(`orion_drive_folders_v3_${user.uid}`);
       if (saved) return JSON.parse(saved);
     } catch {}
     return INITIAL_FOLDERS;
   });
 
   const [files, setFiles] = useState<DriveFile[]>(() => {
+    if (!user) return [];
     try {
-      const saved = localStorage.getItem(STORAGE_KEY_FILES);
+      const saved = localStorage.getItem(`orion_drive_files_v3_${user.uid}`);
       if (saved) return JSON.parse(saved);
     } catch {}
     return INITIAL_FILES;
   });
 
-  // Save changes
+  // Re-sync whenever user account switches or logs in
   useEffect(() => {
+    if (!user) {
+      setFolders([]);
+      setFiles([]);
+      return;
+    }
     try {
-      localStorage.setItem(STORAGE_KEY_FOLDERS, JSON.stringify(folders));
+      const savedFolders = localStorage.getItem(`orion_drive_folders_v3_${user.uid}`);
+      setFolders(savedFolders ? JSON.parse(savedFolders) : []);
+    } catch {
+      setFolders([]);
+    }
+    try {
+      const savedFiles = localStorage.getItem(`orion_drive_files_v3_${user.uid}`);
+      setFiles(savedFiles ? JSON.parse(savedFiles) : []);
+    } catch {
+      setFiles([]);
+    }
+  }, [user?.uid]);
+
+  // Save changes isolated per user
+  useEffect(() => {
+    if (!user) return;
+    try {
+      localStorage.setItem(`orion_drive_folders_v3_${user.uid}`, JSON.stringify(folders));
     } catch {}
-  }, [folders]);
+  }, [folders, user?.uid]);
 
   useEffect(() => {
+    if (!user) return;
     try {
-      localStorage.setItem(STORAGE_KEY_FILES, JSON.stringify(files));
+      localStorage.setItem(`orion_drive_files_v3_${user.uid}`, JSON.stringify(files));
     } catch {}
-  }, [files]);
+  }, [files, user?.uid]);
 
   // Navigation & Filtering
   const [currentSection, setCurrentSection] = useState<DriveViewSection>('all');
@@ -85,6 +127,24 @@ export const OrionDriveApp: React.FC = () => {
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [isStorageOpen, setIsStorageOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Context Menu & Rename state
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    target: ContextMenuTarget;
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    target: { type: 'canvas' },
+  });
+
+  const [renameTarget, setRenameTarget] = useState<
+    | { type: 'file'; item: DriveFile }
+    | { type: 'folder'; item: DriveFolder }
+    | null
+  >(null);
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -289,6 +349,120 @@ export const OrionDriveApp: React.FC = () => {
     showToast('Elemento restaurado.');
   };
 
+  const handleRestoreFolder = (folderId: string) => {
+    setFolders((prev) =>
+      prev.map((f) => (f.id === folderId ? { ...f, isTrash: false } : f))
+    );
+    showToast('Carpeta restaurada.');
+  };
+
+  const handlePermanentDeleteFile = (fileId: string) => {
+    setFiles((prev) => prev.filter((f) => f.id !== fileId));
+    showToast('Archivo eliminado definitivamente.');
+  };
+
+  const handlePermanentDeleteFolder = (folderId: string) => {
+    setFolders((prev) => prev.filter((f) => f.id !== folderId));
+    setFiles((prev) => prev.filter((f) => f.folderId !== folderId));
+    showToast('Carpeta eliminada definitivamente.');
+  };
+
+  // Context Menu triggers
+  const handleContextMenuFolder = (e: React.MouseEvent, folder: DriveFolder) => {
+    setContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      target: { type: 'folder', folder },
+    });
+  };
+
+  const handleContextMenuFile = (e: React.MouseEvent, file: DriveFile) => {
+    setContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      target: { type: 'file', file },
+    });
+  };
+
+  const handleContextMenuCanvas = (e: React.MouseEvent) => {
+    setContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      target: { type: 'canvas' },
+    });
+  };
+
+  // Rename actions
+  const handleInitiateRenameFile = (file: DriveFile) => {
+    setRenameTarget({ type: 'file', item: file });
+    setIsRenameModalOpen(true);
+  };
+
+  const handleInitiateRenameFolder = (folder: DriveFolder) => {
+    setRenameTarget({ type: 'folder', item: folder });
+    setIsRenameModalOpen(true);
+  };
+
+  const handleExecuteRename = (newName: string) => {
+    if (!renameTarget) return;
+
+    if (renameTarget.type === 'file') {
+      const fileId = renameTarget.item.id;
+      const extension = newName.includes('.')
+        ? newName.split('.').pop()?.toLowerCase() || renameTarget.item.extension
+        : renameTarget.item.extension;
+      const fullFileName = newName.includes('.') ? newName : `${newName}.${extension}`;
+      const category = GET_FILE_CATEGORY(fullFileName);
+
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === fileId
+            ? {
+                ...f,
+                name: fullFileName,
+                extension,
+                category,
+                updatedAt: new Date().toISOString(),
+              }
+            : f
+        )
+      );
+      showToast(`Archivo renombrado a "${fullFileName}".`);
+    } else {
+      const folderId = renameTarget.item.id;
+      setFolders((prev) =>
+        prev.map((f) =>
+          f.id === folderId
+            ? { ...f, name: newName, updatedAt: new Date().toISOString() }
+            : f
+        )
+      );
+      showToast(`Carpeta renombrada a "${newName}".`);
+    }
+  };
+
+  const handleChangeFolderColor = (folderId: string, color: string) => {
+    setFolders((prev) =>
+      prev.map((f) => (f.id === folderId ? { ...f, color, updatedAt: new Date().toISOString() } : f))
+    );
+    showToast('Color de carpeta actualizado.');
+  };
+
+  const handleCopyLink = async (file: DriveFile) => {
+    try {
+      if (file.dataUrl) {
+        await navigator.clipboard.writeText(file.dataUrl);
+      } else {
+        await navigator.clipboard.writeText(
+          `https://orionworkspace.vercel.app/drive/share/${file.id}?name=${encodeURIComponent(file.name)}`
+        );
+      }
+      showToast(`Enlace de "${file.name}" copiado al portapapeles.`);
+    } catch {
+      showToast(`Nombre de "${file.name}" copiado.`);
+    }
+  };
+
   // Bulk operations
   const handleToggleSelectFile = (fileId: string) => {
     setSelectedFileIds((prev) =>
@@ -403,6 +577,162 @@ export const OrionDriveApp: React.FC = () => {
     });
   }, [files, currentSection, currentFolderId, selectedCategory, searchQuery, sortField, sortOrder]);
 
+  // Auth Gate: Orion Drive requires mandatory sign-in and starts empty
+  if (!user) {
+    return (
+      <div className="flex flex-col h-screen w-full bg-[#fbfbfa] dark:bg-[#151515] text-neutral-900 dark:text-neutral-100 overflow-hidden relative selection:bg-violet-500/30">
+        {/* Top Minimal Bar */}
+        <header className="h-14 border-b border-[#e9e9e7] dark:border-[#272727] bg-white/95 dark:bg-[#1c1c1c]/95 backdrop-blur-md px-4 flex items-center justify-between shrink-0 select-none z-20">
+          <div className="flex items-center gap-3">
+            <OrionAppSwitcher currentAppName="drive" />
+            <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-800" />
+            <div className="flex items-center gap-2 text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+              <HardDrive className="w-4 h-4 text-violet-500" />
+              <span>Orion Drive</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-500 border border-violet-500/20 font-medium">
+                Cloud Storage
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setCurrentApp('hub')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#252525] border border-neutral-200 dark:border-neutral-800 transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Volver al Hub</span>
+          </button>
+        </header>
+
+        {/* Main Auth Gate Body */}
+        <div className="flex-1 flex items-center justify-center p-6 relative overflow-y-auto">
+          {/* Ambient space glow */}
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-violet-600/10 dark:bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+            className="max-w-md w-full bg-white dark:bg-[#1c1c1c] rounded-3xl p-8 border border-neutral-200/80 dark:border-neutral-800 shadow-2xl relative z-10"
+          >
+            {/* Icon Badge */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white shadow-xl shadow-violet-500/25">
+                  <HardDrive className="w-8 h-8" />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white dark:bg-[#1c1c1c] p-0.5 shadow-xs">
+                  <div className="w-full h-full rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                    <Lock className="w-3 h-3" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Heading */}
+            <div className="text-center space-y-2 mb-6">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-50 dark:bg-violet-950/40 border border-violet-200/60 dark:border-violet-800/60 text-[11px] font-semibold text-violet-700 dark:text-violet-300">
+                <ShieldCheck className="w-3.5 h-3.5 text-violet-500" />
+                <span>Inicio de Sesión Requerido</span>
+              </div>
+              <h2 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                Bienvenido a Orion Drive
+              </h2>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mx-auto">
+                Para garantizar la privacidad y seguridad de tu almacenamiento en la nube, es obligatorio iniciar sesión. Comenzarás con una unidad totalmente limpia y vacía.
+              </p>
+            </div>
+
+            {/* Value props list */}
+            <div className="space-y-2.5 mb-6 bg-neutral-50/80 dark:bg-[#232323]/80 p-3.5 rounded-2xl border border-neutral-200/50 dark:border-neutral-800/80">
+              <div className="flex items-start gap-2.5 text-xs">
+                <Sparkles className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
+                <div className="text-neutral-700 dark:text-neutral-300">
+                  <span className="font-semibold text-neutral-900 dark:text-neutral-100">Nube vacía al iniciar:</span> 0 B usados y sin archivos mock. Todo lo que subas será tuyo.
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5 text-xs">
+                <Cloud className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+                <div className="text-neutral-700 dark:text-neutral-300">
+                  <span className="font-semibold text-neutral-900 dark:text-neutral-100">100 GB de capacidad:</span> Almacena y visualiza imágenes, PDF, código y vídeos.
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5 text-xs">
+                <Lock className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <div className="text-neutral-700 dark:text-neutral-300">
+                  <span className="font-semibold text-neutral-900 dark:text-neutral-100">Aislamiento por cuenta:</span> Tus carpetas y documentos quedan vinculados únicamente a tu usuario.
+                </div>
+              </div>
+            </div>
+
+            {/* Error banner */}
+            {googleSyncError && (
+              <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-semibold">{googleSyncError}</p>
+                  {googleSyncError.includes('unauthorized domain') && (
+                    <button
+                      onClick={() => setUnauthorizedDomainForModal(window.location.hostname)}
+                      className="underline text-[11px] font-medium hover:opacity-80 block text-left cursor-pointer"
+                    >
+                      Ver instrucciones para autorizar dominio en Firebase
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="space-y-3">
+              <button
+                onClick={loginWithGoogle}
+                disabled={isLoadingGoogle}
+                className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-2xl bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-neutral-900 text-xs font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 cursor-pointer active:scale-[0.99]"
+              >
+                {isLoadingGoogle ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />
+                    <span>Conectando con Google...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3h3.88c2.27-2.09 3.66-5.17 3.66-9.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.1C3.28 21.44 7.35 24 12 24z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.28 14.32c-.25-.72-.38-1.49-.38-2.32s.14-1.6.38-2.32V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.1z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.28 2.56 1.25 6.58l4.03 3.1c.95-2.83 3.6-4.93 6.72-4.93z"
+                      />
+                    </svg>
+                    <span>Iniciar sesión con Google</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => setCurrentApp('hub')}
+                className="w-full py-2.5 px-4 rounded-xl text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white text-xs font-medium hover:bg-neutral-100 dark:hover:bg-[#252525] transition-colors cursor-pointer text-center"
+              >
+                Volver a Orion Workspace Hub
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       onDragOver={handleDragOver}
@@ -493,7 +823,13 @@ export const OrionDriveApp: React.FC = () => {
         />
 
         {/* Content Body */}
-        <main className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+        <main
+          onContextMenu={(e) => {
+            e.preventDefault();
+            handleContextMenuCanvas(e);
+          }}
+          className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6"
+        >
           {/* Trash Top Notice */}
           {currentSection === 'trash' && (
             <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/25 border border-amber-200 dark:border-amber-900/60 flex items-center justify-between gap-3">
@@ -538,7 +874,7 @@ export const OrionDriveApp: React.FC = () => {
                 <p className="text-xs text-neutral-400 dark:text-neutral-500 max-w-sm mt-1">
                   {currentSection === 'trash'
                     ? 'Los elementos que elimines aparecerán aquí temporalmente.'
-                    : 'Arrastra archivos aquí o pulsa el botón "Subir" para empezar a organizar tu nube.'}
+                    : 'Haz clic derecho o arrastra archivos aquí para empezar a organizar tu nube.'}
                 </p>
               </div>
 
@@ -572,6 +908,8 @@ export const OrionDriveApp: React.FC = () => {
               onDownloadFile={handleDownloadFile}
               selectedFileIds={selectedFileIds}
               onToggleSelectFile={handleToggleSelectFile}
+              onContextMenuFolder={handleContextMenuFolder}
+              onContextMenuFile={handleContextMenuFile}
             />
           ) : (
             <DriveFileList
@@ -590,6 +928,8 @@ export const OrionDriveApp: React.FC = () => {
               isAllSelected={
                 filteredFiles.length > 0 && selectedFileIds.length === filteredFiles.length
               }
+              onContextMenuFolder={handleContextMenuFolder}
+              onContextMenuFile={handleContextMenuFile}
             />
           )}
         </main>
@@ -615,6 +955,46 @@ export const OrionDriveApp: React.FC = () => {
         onClose={() => setIsStorageOpen(false)}
         files={files}
         onEmptyTrash={handleEmptyTrash}
+      />
+
+      {/* Custom Context Menu */}
+      <DriveContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        target={contextMenu.target}
+        onClose={() => setContextMenu((prev) => ({ ...prev, isOpen: false }))}
+        onOpenFilePreview={setPreviewFile}
+        onDownloadFile={handleDownloadFile}
+        onToggleStarFile={handleToggleStarFile}
+        onDeleteFile={handleDeleteFile}
+        onRestoreFile={handleRestoreFromTrash}
+        onPermanentDeleteFile={handlePermanentDeleteFile}
+        onRenameFile={handleInitiateRenameFile}
+        onCopyLink={handleCopyLink}
+        onOpenFolder={handleOpenFolder}
+        onToggleStarFolder={handleToggleStarFolder}
+        onDeleteFolder={handleDeleteFolder}
+        onRestoreFolder={handleRestoreFolder}
+        onPermanentDeleteFolder={handlePermanentDeleteFolder}
+        onRenameFolder={handleInitiateRenameFolder}
+        onChangeFolderColor={handleChangeFolderColor}
+        onNewFolder={() => setIsNewFolderOpen(true)}
+        onUploadFile={() => fileInputRef.current?.click()}
+        onToggleViewMode={setViewMode}
+        viewMode={viewMode}
+        onSortChange={setSortField}
+        sortField={sortField}
+        onOpenStorage={() => setIsStorageOpen(true)}
+        onSelectAll={handleSelectAll}
+        isTrashSection={currentSection === 'trash'}
+      />
+
+      {/* Rename File / Folder Modal */}
+      <DriveRenameModal
+        isOpen={isRenameModalOpen}
+        onClose={() => setIsRenameModalOpen(false)}
+        target={renameTarget}
+        onRename={handleExecuteRename}
       />
 
       {/* Floating Micro-Toast */}

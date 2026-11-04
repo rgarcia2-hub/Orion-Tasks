@@ -35,6 +35,8 @@ interface DriveFileGridProps {
   onDownloadFile: (file: DriveFile) => void;
   selectedFileIds: string[];
   onToggleSelectFile: (fileId: string) => void;
+  onContextMenuFolder?: (e: React.MouseEvent, folder: DriveFolder) => void;
+  onContextMenuFile?: (e: React.MouseEvent, file: DriveFile) => void;
 }
 
 export const DriveFileGrid: React.FC<DriveFileGridProps> = ({
@@ -49,6 +51,8 @@ export const DriveFileGrid: React.FC<DriveFileGridProps> = ({
   onDownloadFile,
   selectedFileIds,
   onToggleSelectFile,
+  onContextMenuFolder,
+  onContextMenuFile,
 }) => {
   const getFileCategoryIcon = (file: DriveFile) => {
     switch (file.category) {
@@ -107,6 +111,11 @@ export const DriveFileGrid: React.FC<DriveFileGridProps> = ({
                 whileHover={{ y: -2, scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => onOpenFolder(folder.id)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onContextMenuFolder?.(e, folder);
+                }}
                 className="group relative p-3.5 rounded-2xl bg-white dark:bg-[#202020] border border-neutral-200/90 dark:border-neutral-800 hover:border-violet-300 dark:hover:border-violet-700/80 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-2">
@@ -161,6 +170,11 @@ export const DriveFileGrid: React.FC<DriveFileGridProps> = ({
                   layout
                   whileHover={{ y: -2 }}
                   onClick={() => onOpenFilePreview(file)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onContextMenuFile?.(e, file);
+                  }}
                   className={`group relative rounded-2xl bg-white dark:bg-[#202020] border transition-all cursor-pointer flex flex-col justify-between overflow-hidden shadow-2xs hover:shadow-xs ${
                     isSelected
                       ? 'border-violet-500 ring-2 ring-violet-500/30 dark:ring-violet-500/20'

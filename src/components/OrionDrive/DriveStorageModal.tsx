@@ -29,8 +29,9 @@ export const DriveStorageModal: React.FC<DriveStorageModalProps> = ({
   const mediaSize = activeFiles.filter((f) => f.category === 'media').reduce((a, f) => a + (f.size || 0), 0);
   const otherSize = activeFiles.filter((f) => ['data', 'archive', 'other'].includes(f.category)).reduce((a, f) => a + (f.size || 0), 0);
 
-  const totalUsedBytes = docsSize + imgSize + codeSize + mediaSize + otherSize + 14800000000; // includes base system files
+  const totalUsedBytes = docsSize + imgSize + codeSize + mediaSize + otherSize;
   const totalQuotaBytes = 100 * 1024 * 1024 * 1024; // 100 GB
+  const usedPercentage = totalUsedBytes > 0 ? ((totalUsedBytes / totalQuotaBytes) * 100).toFixed(2) : '0';
 
   return (
     <AnimatePresence>
@@ -85,35 +86,41 @@ export const DriveStorageModal: React.FC<DriveStorageModalProps> = ({
                 </span>
               </div>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-100 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 font-mono">
-                14.8% usado
+                {usedPercentage}% usado
               </span>
             </div>
 
             {/* Segmented Bar */}
             <div className="w-full h-3 rounded-full bg-neutral-200 dark:bg-[#333333] flex overflow-hidden">
-              <div style={{ width: '40%' }} className="bg-blue-500 h-full" title="Documentos" />
-              <div style={{ width: '25%' }} className="bg-pink-500 h-full" title="Imágenes" />
-              <div style={{ width: '20%' }} className="bg-purple-500 h-full" title="Multimedia" />
-              <div style={{ width: '15%' }} className="bg-emerald-500 h-full" title="Código & Datos" />
+              {totalUsedBytes > 0 ? (
+                <>
+                  <div style={{ width: `${(docsSize / totalUsedBytes) * 100}%` }} className="bg-blue-500 h-full" title="Documentos" />
+                  <div style={{ width: `${(imgSize / totalUsedBytes) * 100}%` }} className="bg-pink-500 h-full" title="Imágenes" />
+                  <div style={{ width: `${(mediaSize / totalUsedBytes) * 100}%` }} className="bg-purple-500 h-full" title="Multimedia" />
+                  <div style={{ width: `${((codeSize + otherSize) / totalUsedBytes) * 100}%` }} className="bg-emerald-500 h-full" title="Código & Datos" />
+                </>
+              ) : (
+                <div style={{ width: '100%' }} className="bg-neutral-200 dark:bg-[#333333] h-full" />
+              )}
             </div>
 
             {/* Categories breakdown */}
             <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
               <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
-                <span>Documentos: {FORMAT_FILE_SIZE(docsSize + 4400000000)}</span>
+                <span>Documentos: {FORMAT_FILE_SIZE(docsSize)}</span>
               </div>
               <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400">
                 <span className="w-2.5 h-2.5 rounded-full bg-pink-500 shrink-0" />
-                <span>Imágenes: {FORMAT_FILE_SIZE(imgSize + 2900000000)}</span>
+                <span>Imágenes: {FORMAT_FILE_SIZE(imgSize)}</span>
               </div>
               <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400">
                 <span className="w-2.5 h-2.5 rounded-full bg-purple-500 shrink-0" />
-                <span>Media & Audio: {FORMAT_FILE_SIZE(mediaSize + 8900000000)}</span>
+                <span>Media & Audio: {FORMAT_FILE_SIZE(mediaSize)}</span>
               </div>
               <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                <span>Código & Config: {FORMAT_FILE_SIZE(codeSize + otherSize + 50000000)}</span>
+                <span>Código & Config: {FORMAT_FILE_SIZE(codeSize + otherSize)}</span>
               </div>
             </div>
           </div>

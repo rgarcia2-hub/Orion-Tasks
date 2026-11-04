@@ -19,6 +19,7 @@ import {
   Grid,
 } from 'lucide-react';
 import { OrionAppSwitcher } from '../OrionAppSwitcher';
+import { GoogleAuthButton } from '../GoogleAuthButton';
 import { useCalendar } from '../../context/CalendarContext';
 import {
   DriveViewMode,
@@ -249,6 +250,11 @@ export const DriveToolbar: React.FC<DriveToolbarProps> = ({
             </div>
           </>
         )}
+
+        {/* User Account / Auth Button */}
+        <div className="flex items-center">
+          <GoogleAuthButton compact />
+        </div>
 
         {/* Back to Hub shortcut button */}
         <button
