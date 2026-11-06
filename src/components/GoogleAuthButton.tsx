@@ -17,13 +17,13 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ compact = fa
     setIsWorkspaceModalOpen,
   } = useCalendar();
 
-  if (isGoogleConnected && user) {
+  if (user) {
     return (
       <div className="flex items-center gap-2">
         <button
           onClick={refreshGoogleData}
           disabled={isLoadingGoogle}
-          title="Sincronizar eventos de Google Calendar"
+          title={isGoogleConnected ? "Sincronizar datos de Google (Calendar / Gmail)" : "Sincronizar cuenta"}
           className="p-1.5 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isLoadingGoogle ? 'animate-spin' : ''}`} />
@@ -44,7 +44,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ compact = fa
               />
             ) : (
               <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
-                {(user.displayName || user.email || 'G')[0].toUpperCase()}
+                {(user.displayName || user.email || 'U')[0].toUpperCase()}
               </div>
             )}
             {!compact && (
@@ -55,7 +55,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ compact = fa
           </button>
           <button
             onClick={logoutGoogle}
-            title="Desconectar cuenta de Google"
+            title="Cerrar sesión de Orion Workspace"
             className="text-neutral-400 hover:text-rose-500 transition-colors ml-1 cursor-pointer p-0.5 rounded"
           >
             <LogOut className="w-3 h-3" />
@@ -98,7 +98,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ compact = fa
           />
         </svg>
       )}
-      <span>{compact ? 'Conectar' : 'Conectar Google Calendar'}</span>
+      <span>{compact ? 'Iniciar Sesión' : 'Iniciar Sesión con Google'}</span>
     </button>
   );
 };

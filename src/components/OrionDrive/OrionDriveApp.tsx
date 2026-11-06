@@ -40,6 +40,7 @@ import {
   AlertCircle,
   Loader2,
   ArrowRight,
+  Plus,
 } from 'lucide-react';
 
 export const OrionDriveApp: React.FC = () => {
@@ -80,15 +81,15 @@ export const OrionDriveApp: React.FC = () => {
     }
     try {
       const savedFolders = localStorage.getItem(`orion_drive_folders_v3_${user.uid}`);
-      setFolders(savedFolders ? JSON.parse(savedFolders) : []);
+      setFolders(savedFolders ? JSON.parse(savedFolders) : INITIAL_FOLDERS);
     } catch {
-      setFolders([]);
+      setFolders(INITIAL_FOLDERS);
     }
     try {
       const savedFiles = localStorage.getItem(`orion_drive_files_v3_${user.uid}`);
-      setFiles(savedFiles ? JSON.parse(savedFiles) : []);
+      setFiles(savedFiles ? JSON.parse(savedFiles) : INITIAL_FILES);
     } catch {
-      setFiles([]);
+      setFiles(INITIAL_FILES);
     }
   }, [user?.uid]);
 
@@ -822,13 +823,39 @@ export const OrionDriveApp: React.FC = () => {
           }
         />
 
+        {/* Mobile Horizontal Section Tabs (< md) */}
+        <div className="flex md:hidden items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#1c1c1c] border-b border-[#e9e9e7] dark:border-[#272727] overflow-x-auto no-scrollbar shrink-0">
+          {[
+            { id: 'all' as const, label: 'Mi Unidad' },
+            { id: 'recents' as const, label: 'Recientes' },
+            { id: 'starred' as const, label: 'Destacados' },
+            { id: 'trash' as const, label: 'Papelera' },
+          ].map((sec) => (
+            <button
+              key={sec.id}
+              onClick={() => {
+                setCurrentSection(sec.id);
+                setCurrentFolderId(null);
+                setSelectedFileIds([]);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                currentSection === sec.id
+                  ? 'bg-violet-600 text-white shadow-xs'
+                  : 'bg-neutral-100 dark:bg-[#252525] text-neutral-600 dark:text-neutral-400'
+              }`}
+            >
+              {sec.label}
+            </button>
+          ))}
+        </div>
+
         {/* Content Body */}
         <main
           onContextMenu={(e) => {
             e.preventDefault();
             handleContextMenuCanvas(e);
           }}
-          className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6"
+          className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 pb-24 md:pb-6"
         >
           {/* Trash Top Notice */}
           {currentSection === 'trash' && (
@@ -996,6 +1023,19 @@ export const OrionDriveApp: React.FC = () => {
         target={renameTarget}
         onRename={handleExecuteRename}
       />
+
+      {/* Mobile Floating Action Button (FAB) */}
+      <div className="fixed bottom-20 right-4 z-30 md:hidden flex flex-col items-end gap-2.5 pointer-events-auto">
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white shadow-xl shadow-violet-500/30 flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+          title="Subir archivo desde el móvil"
+          aria-label="Subir archivo"
+        >
+          <Plus className="w-6 h-6 stroke-[2.5]" />
+        </button>
+      </div>
 
       {/* Floating Micro-Toast */}
       <AnimatePresence>

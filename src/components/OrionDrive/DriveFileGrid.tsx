@@ -133,7 +133,7 @@ export const DriveFileGrid: React.FC<DriveFileGridProps> = ({
                     className={`p-1 rounded-lg transition-colors cursor-pointer ${
                       folder.isStarred
                         ? 'text-amber-500 opacity-100'
-                        : 'text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-amber-500'
+                        : 'text-neutral-400 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 hover:text-amber-500'
                     }`}
                     title={folder.isStarred ? 'Quitar de destacados' : 'Destacar carpeta'}
                   >
@@ -192,7 +192,7 @@ export const DriveFileGrid: React.FC<DriveFileGridProps> = ({
                       className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-violet-600 border-violet-600 text-white'
-                          : 'border-neutral-300 dark:border-neutral-700 bg-white/80 dark:bg-[#252525] opacity-0 group-hover:opacity-100 hover:border-violet-500'
+                          : 'border-neutral-300 dark:border-neutral-700 bg-white/80 dark:bg-[#252525] opacity-60 sm:opacity-0 sm:group-hover:opacity-100 hover:border-violet-500'
                       }`}
                     >
                       {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
@@ -214,7 +214,7 @@ export const DriveFileGrid: React.FC<DriveFileGridProps> = ({
                         className={`p-1 rounded-md transition-colors cursor-pointer ${
                           file.isStarred
                             ? 'text-amber-500 opacity-100'
-                            : 'text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-amber-500'
+                            : 'text-neutral-400 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 hover:text-amber-500'
                         }`}
                         title={file.isStarred ? 'Quitar de favoritos' : 'Favorito'}
                       >

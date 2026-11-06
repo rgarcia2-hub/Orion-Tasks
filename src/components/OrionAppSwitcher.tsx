@@ -12,10 +12,11 @@ import {
   Check,
   Grid,
   ExternalLink,
+  Shield,
 } from 'lucide-react';
 
 interface OrionAppSwitcherProps {
-  currentAppName?: 'tasks' | 'calendar' | 'mail' | 'drive';
+  currentAppName?: 'tasks' | 'calendar' | 'mail' | 'drive' | 'authenticator';
 }
 
 export const OrionAppSwitcher: React.FC<OrionAppSwitcherProps> = ({ currentAppName }) => {
@@ -95,10 +96,23 @@ export const OrionAppSwitcher: React.FC<OrionAppSwitcherProps> = ({ currentAppNa
       description: 'Almacenamiento seguro en la nube y visor multimedia',
       isActive: currentAppName === 'drive',
       isAvailable: true,
-      badge: 'Nuevo',
       icon: (
         <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white flex items-center justify-center shrink-0 shadow-xs">
           <HardDrive className="w-4.5 h-4.5" />
+        </div>
+      ),
+    },
+    {
+      id: 'authenticator' as const,
+      name: 'Orion Authenticator',
+      subUrl: '/authenticator',
+      description: 'Generador de códigos 2FA con sincronización en la nube',
+      isActive: currentAppName === 'authenticator',
+      isAvailable: true,
+      badge: 'Nuevo',
+      icon: (
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+          <Shield className="w-4.5 h-4.5" />
         </div>
       ),
     },
@@ -140,12 +154,16 @@ export const OrionAppSwitcher: React.FC<OrionAppSwitcherProps> = ({ currentAppNa
           <div className="w-4 h-4 rounded-sm bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center text-white shadow-2xs">
             <HardDrive className="w-2.5 h-2.5" />
           </div>
+        ) : currentAppName === 'authenticator' ? (
+          <div className="w-4 h-4 rounded-sm bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-2xs">
+            <Shield className="w-2.5 h-2.5" />
+          </div>
         ) : (
           <div className="w-4 h-4 rounded-sm bg-neutral-900 dark:bg-neutral-100 flex items-center justify-center text-white dark:text-neutral-900 shadow-2xs">
             <CalendarIcon className="w-2.5 h-2.5" />
           </div>
         )}
-        <span className="capitalize">{currentAppName === 'calendar' ? 'Calendar' : currentAppName === 'mail' ? 'Mail' : currentAppName === 'drive' ? 'Drive' : 'Tasks'}</span>
+        <span className="capitalize">{currentAppName === 'calendar' ? 'Calendar' : currentAppName === 'mail' ? 'Mail' : currentAppName === 'drive' ? 'Drive' : currentAppName === 'authenticator' ? 'Authenticator' : 'Tasks'}</span>
         <ChevronDown className={`w-3 h-3 text-neutral-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
@@ -183,6 +201,7 @@ export const OrionAppSwitcher: React.FC<OrionAppSwitcherProps> = ({ currentAppNa
                     if (app.id === 'calendar') setCurrentApp('calendar');
                     if (app.id === 'mail') setCurrentApp('mail');
                     if (app.id === 'drive') setCurrentApp('drive');
+                    if (app.id === 'authenticator') setCurrentApp('authenticator');
                   }}
                   className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all ${
                     app.isActive

@@ -19,9 +19,11 @@
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "firebase": "^13.0.0",
+    "jsqr": "^1.4.0",
     "lucide-react": "^0.546.0",
     "marked": "^18.1.1",
     "motion": "^12.23.24",
+    "otpauth": "^9.6.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "vite": "^8.3.0"

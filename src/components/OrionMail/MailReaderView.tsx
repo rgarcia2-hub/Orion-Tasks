@@ -23,6 +23,7 @@ import {
   Copy,
   Check,
   Zap,
+  ArrowLeft,
 } from 'lucide-react';
 import { OrionEmail, isOrionAdmin } from '../../types/mail';
 import { EmailBodyRenderer } from './EmailBodyRenderer';
@@ -34,6 +35,7 @@ interface MailReaderViewProps {
   onToggleRead: (emailId: string) => void;
   onDeleteEmail: (emailId: string) => void;
   onReply: (email: OrionEmail, replyText: string) => void;
+  onBack?: () => void;
 }
 
 export const MailReaderView: React.FC<MailReaderViewProps> = ({
@@ -42,6 +44,7 @@ export const MailReaderView: React.FC<MailReaderViewProps> = ({
   onToggleRead,
   onDeleteEmail,
   onReply,
+  onBack,
 }) => {
   const [inlineReplyText, setInlineReplyText] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
@@ -182,8 +185,19 @@ export const MailReaderView: React.FC<MailReaderViewProps> = ({
       }`}
     >
       {/* Top Action Toolbar */}
-      <div className="h-14 px-6 border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-[#181818] flex items-center justify-between shrink-0">
+      <div className="h-14 px-4 sm:px-6 border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-[#181818] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-1.5">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="md:hidden p-2 -ml-1 rounded-lg text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
+              title="Volver a los correos"
+              aria-label="Volver"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={() => onToggleStar(email.id)}
             title={email.isStarred ? 'Quitar estrella' : 'Destacar'}

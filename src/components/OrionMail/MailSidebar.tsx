@@ -54,7 +54,7 @@ export const MailSidebar: React.FC<MailSidebarProps> = ({
   ];
 
   return (
-    <aside className="w-64 h-full shrink-0 border-r border-neutral-200/80 dark:border-neutral-800/80 bg-[#fbfbfb] dark:bg-[#161616] flex flex-col justify-between select-none">
+    <aside className="hidden md:flex w-64 h-full shrink-0 border-r border-neutral-200/80 dark:border-neutral-800/80 bg-[#fbfbfb] dark:bg-[#161616] flex-col justify-between select-none">
       <div className="p-3.5 space-y-3.5 overflow-y-auto">
         {/* Account Selector Pill */}
         <div className="space-y-1.5">

@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { OrionLogo } from './OrionLogo';
-import { Calendar as CalendarIcon, CalendarDays, Mail, Sparkles, HardDrive } from 'lucide-react';
+import { Calendar as CalendarIcon, CalendarDays, Mail, Sparkles, HardDrive, Shield } from 'lucide-react';
 
 interface AppTransitionScreenProps {
   isOpen: boolean;
-  targetApp: 'hub' | 'tasks' | 'calendar' | 'mail' | 'drive' | 'privacy' | 'terms' | null;
+  targetApp: 'hub' | 'tasks' | 'calendar' | 'mail' | 'drive' | 'authenticator' | 'privacy' | 'terms' | null;
   progress?: number;
 }
 
@@ -18,8 +18,14 @@ export const AppTransitionScreen: React.FC<AppTransitionScreenProps> = ({
   const isCalendar = targetApp === 'calendar';
   const isMail = targetApp === 'mail';
   const isDrive = targetApp === 'drive';
+  const isAuthenticator = targetApp === 'authenticator';
 
   const getSubtext = () => {
+    if (isAuthenticator) {
+      if (progress < 40) return 'Conectando con almacenamiento cifrado 2FA...';
+      if (progress < 80) return 'Sincronizando claves y generador TOTP...';
+      return 'Abriendo Orion Authenticator...';
+    }
     if (isDrive) {
       if (progress < 40) return 'Conectando con Orion Cloud Storage...';
       if (progress < 80) return 'Sincronizando carpetas y archivos locales...';
@@ -45,6 +51,7 @@ export const AppTransitionScreen: React.FC<AppTransitionScreenProps> = ({
   };
 
   const getSubUrl = () => {
+    if (isAuthenticator) return '/authenticator';
     if (isDrive) return '/drive';
     if (isMail) return '/mail';
     if (isCalendar) return '/calendar';
@@ -53,6 +60,7 @@ export const AppTransitionScreen: React.FC<AppTransitionScreenProps> = ({
   };
 
   const getTitle = () => {
+    if (isAuthenticator) return 'Abriendo Orion Authenticator';
     if (isDrive) return 'Abriendo Orion Drive';
     if (isMail) return 'Abriendo Orion Mail';
     if (isCalendar) return 'Abriendo Orion Calendar';
@@ -120,6 +128,15 @@ export const AppTransitionScreen: React.FC<AppTransitionScreenProps> = ({
                   className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-xl ring-4 ring-blue-500/20"
                 >
                   <CalendarDays className="w-9 h-9" />
+                </motion.div>
+              ) : isAuthenticator ? (
+                <motion.div
+                  initial={{ scale: 0.8, rotate: -4 }}
+                  animate={{ scale: [0.95, 1.05, 1], rotate: [0, 2, 0] }}
+                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                  className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-xl ring-4 ring-emerald-500/20"
+                >
+                  <Shield className="w-9 h-9" />
                 </motion.div>
               ) : isTasks ? (
                 <motion.div

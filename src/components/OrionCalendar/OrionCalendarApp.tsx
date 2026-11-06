@@ -291,7 +291,7 @@ export const OrionCalendarApp: React.FC = () => {
             <button
               onClick={() => setIsSpotlightOpen(true)}
               title="Buscar en Orion (Ctrl/Cmd + K)"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-[#252525] border border-neutral-200/80 dark:border-neutral-800 transition-colors cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-[#252525] border border-neutral-200/80 dark:border-neutral-800 transition-colors cursor-pointer"
             >
               <Search className="w-3.5 h-3.5 text-blue-500" />
               <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono rounded bg-neutral-200/60 dark:bg-neutral-800 text-neutral-500 border border-neutral-300/40 dark:border-neutral-700">⌘K</kbd>
@@ -299,7 +299,7 @@ export const OrionCalendarApp: React.FC = () => {
 
             <button
               onClick={() => handleOpenNewEvent()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-xs transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-xs transition-colors cursor-pointer shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Nuevo Evento</span>
@@ -308,7 +308,7 @@ export const OrionCalendarApp: React.FC = () => {
             <button
               onClick={() => setIsWorkspaceModalOpen(true)}
               title="Orion Workspace · Tus Aplicaciones"
-              className="p-2 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-[#252525] transition-colors cursor-pointer"
+              className="hidden sm:flex p-2 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-[#252525] transition-colors cursor-pointer"
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
@@ -320,7 +320,7 @@ export const OrionCalendarApp: React.FC = () => {
             <button
               onClick={toggleDarkMode}
               title={darkMode ? 'Modo claro' : 'Modo oscuro'}
-              className="p-2 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-[#252525] transition-colors cursor-pointer"
+              className="hidden sm:flex p-2 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-[#252525] transition-colors cursor-pointer"
             >
               {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
             </button>
@@ -345,9 +345,9 @@ export const OrionCalendarApp: React.FC = () => {
         )}
 
         {/* Workspace Body: Left Sidebar + Main Calendar View */}
-        <div className="max-w-[1720px] mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 items-start">
-          {/* Left Sidebar */}
-          <aside className="w-full md:w-64 shrink-0 space-y-4">
+        <div className="max-w-[1720px] mx-auto p-3 sm:p-6 flex flex-col md:flex-row gap-6 items-start pb-24 md:pb-6">
+          {/* Left Sidebar (Hidden on mobile to prioritize main calendar view) */}
+          <aside className="hidden md:block w-full md:w-64 shrink-0 space-y-4">
             {/* Interactive Mini Month Date Picker */}
             <OrionCalendarMiniMonth
               selectedDate={currentDate}

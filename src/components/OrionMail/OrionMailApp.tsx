@@ -416,10 +416,11 @@ export const OrionMailApp: React.FC = () => {
         <div className="flex items-center gap-3 shrink-0">
           <OrionAppSwitcher currentAppName="mail" />
 
-          {isGoogleConnected ? (
-            <div className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-neutral-500 dark:text-neutral-400 font-medium pl-1">
+          {user ? (
+            <div className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-neutral-600 dark:text-neutral-300 font-medium pl-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>Gmail sincronizado</span>
+              <span>{isGoogleConnected ? 'Gmail conectado' : 'Buzón Workspace'}</span>
+              <span className="text-neutral-400 dark:text-neutral-500 font-mono text-[10px]">({user.email})</span>
             </div>
           ) : (
             <div className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 font-medium pl-1">
@@ -448,7 +449,7 @@ export const OrionMailApp: React.FC = () => {
 
       {/* 3-Column Workspace Grid */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Column 1: Navigation & Folders */}
+        {/* Column 1: Navigation & Folders (Desktop) */}
         <MailSidebar
           currentFolder={currentFolder}
           onSelectFolder={setCurrentFolder}
@@ -462,24 +463,29 @@ export const OrionMailApp: React.FC = () => {
           isRefreshing={isRefreshing}
         />
 
-        {/* Column 2: Thread List */}
-        <MailThreadList
-          emails={allEmails}
-          selectedEmailId={selectedEmailId}
-          onSelectEmail={handleSelectEmail}
-          onToggleStar={handleToggleStar}
-          folder={currentFolder}
-          onOpenCompose={() => setIsComposeOpen(true)}
-        />
+        {/* Column 2: Thread List (Full width on mobile when no email selected) */}
+        <div className={`h-full ${selectedEmailId ? 'hidden md:flex' : 'flex flex-1 md:flex-none'}`}>
+          <MailThreadList
+            emails={allEmails}
+            selectedEmailId={selectedEmailId}
+            onSelectEmail={handleSelectEmail}
+            onToggleStar={handleToggleStar}
+            folder={currentFolder}
+            onOpenCompose={() => setIsComposeOpen(true)}
+          />
+        </div>
 
-        {/* Column 3: Message Reader View */}
-        <MailReaderView
-          email={selectedEmail}
-          onToggleStar={handleToggleStar}
-          onToggleRead={handleToggleRead}
-          onDeleteEmail={handleDeleteEmail}
-          onReply={handleReply}
-        />
+        {/* Column 3: Message Reader View (Full width on mobile when email is selected) */}
+        <div className={`h-full flex-1 ${selectedEmailId ? 'flex' : 'hidden md:flex'}`}>
+          <MailReaderView
+            email={selectedEmail}
+            onToggleStar={handleToggleStar}
+            onToggleRead={handleToggleRead}
+            onDeleteEmail={handleDeleteEmail}
+            onReply={handleReply}
+            onBack={() => setSelectedEmailId(null)}
+          />
+        </div>
       </div>
 
       {/* Compose Modal */}

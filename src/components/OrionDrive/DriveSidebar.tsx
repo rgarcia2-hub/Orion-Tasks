@@ -100,7 +100,7 @@ export const DriveSidebar: React.FC<DriveSidebarProps> = ({
   ];
 
   return (
-    <aside className="w-64 h-full bg-[#fbfbfa] dark:bg-[#181818] border-r border-[#e9e9e7] dark:border-[#272727] flex flex-col justify-between shrink-0 select-none overflow-y-auto">
+    <aside className="hidden md:flex w-64 h-full bg-[#fbfbfa] dark:bg-[#181818] border-r border-[#e9e9e7] dark:border-[#272727] flex-col justify-between shrink-0 select-none overflow-y-auto">
       <div className="p-4 space-y-5">
         {/* Quick Action Button Group with smooth hover animations */}
         <div className="flex flex-col gap-2">

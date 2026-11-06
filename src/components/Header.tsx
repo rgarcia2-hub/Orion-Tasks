@@ -61,28 +61,24 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewEvent, onOpenImportICS 
   ];
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-6 px-6 py-2.5 bg-white/90 dark:bg-[#191919]/90 backdrop-blur-md border-b border-[#e9e9e7] dark:border-[#2e2e2e] transition-colors">
+    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 sm:gap-6 px-3 sm:px-6 py-2.5 bg-white/90 dark:bg-[#191919]/90 backdrop-blur-md border-b border-[#e9e9e7] dark:border-[#2e2e2e] transition-colors">
       {/* Zone 1: Orion Brand Logo & Orion Tasks App Indicator */}
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <OrionAppSwitcher currentAppName="tasks" />
 
         {user && (
           <span
-            className={`hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-md border ${
-              isCloudSynced
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'
-                : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/60'
-            }`}
+            className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-md border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60"
             title={isCloudSynced ? 'Guardado en tu cuenta de Google (Firestore)' : 'Sincronizando con tu cuenta...'}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${isCloudSynced ? 'bg-emerald-500' : 'bg-amber-500 animate-ping'}`} />
-            {isCloudSynced ? 'Nube Activa' : 'Sincronizando'}
+            <span className="hidden md:inline">{isCloudSynced ? 'Nube Activa' : 'Sincronizando'}</span>
           </span>
         )}
       </div>
 
-      {/* Zone 2: Animated Navigation Tabs (4 tabs) */}
-      <nav className="flex items-center gap-1 p-1 bg-[#f4f4f2] dark:bg-[#242424] rounded-lg overflow-x-auto max-w-full">
+      {/* Zone 2: Navigation Tabs (Shown on tablets and desktop; mobile uses bottom bar) */}
+      <nav className="hidden md:flex items-center gap-1 p-1 bg-[#f4f4f2] dark:bg-[#242424] rounded-lg overflow-x-auto max-w-full">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
 
@@ -117,22 +113,22 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewEvent, onOpenImportICS 
         })}
       </nav>
 
-      {/* Zone 3: Google Connect + Utilities */}
-      <div className="flex items-center gap-2 shrink-0">
+      {/* Zone 3: Actions & Quick Controls */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <button
           onClick={() => setIsSpotlightOpen(true)}
           title="Buscar en Orion (Ctrl/Cmd + K)"
-          className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-800 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-800 transition-colors cursor-pointer"
         >
           <Search className="w-3.5 h-3.5 text-blue-500" />
           <span className="hidden md:inline text-neutral-400 dark:text-neutral-500 font-normal">Buscar...</span>
-          <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono rounded bg-neutral-200/60 dark:bg-neutral-800 text-neutral-500 border border-neutral-300/40 dark:border-neutral-700">⌘K</kbd>
+          <kbd className="hidden lg:inline-block px-1.5 py-0.5 text-[10px] font-mono rounded bg-neutral-200/60 dark:bg-neutral-800 text-neutral-500 border border-neutral-300/40 dark:border-neutral-700">⌘K</kbd>
         </button>
 
         <button
           onClick={() => setCurrentApp('hub')}
-          title="Orion Workspace Hub · Selector de Aplicaciones"
-          className="p-2 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+          title="Orion Workspace Hub"
+          className="hidden sm:flex p-2 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
         >
           <LayoutGrid className="w-4 h-4" />
         </button>
@@ -144,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewEvent, onOpenImportICS 
         <button
           onClick={onOpenImportICS}
           title="Importar calendario desde archivo .ics"
-          className="p-2 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+          className="hidden md:flex p-2 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
         >
           <UploadCloud className="w-4 h-4" />
         </button>
@@ -152,7 +148,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewEvent, onOpenImportICS 
         <button
           onClick={toggleDarkMode}
           title={darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-          className="p-2 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+          className="hidden sm:flex p-2 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
         >
           {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
         </button>
@@ -168,19 +164,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewEvent, onOpenImportICS 
                 isPinned: false,
               });
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 rounded-lg shadow-xs transition-colors whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 rounded-xl shadow-xs transition-colors whitespace-nowrap cursor-pointer active:scale-95"
             title="Crear una nueva nota"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Nueva Nota</span>
+            <span className="hidden sm:inline">Nueva Nota</span>
           </button>
         ) : (
           <button
             onClick={onOpenNewEvent}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 rounded-lg shadow-xs transition-colors whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 rounded-xl shadow-xs transition-colors whitespace-nowrap cursor-pointer active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Nuevo Evento</span>
+            <span className="hidden sm:inline">Nuevo Evento</span>
           </button>
         )}
       </div>

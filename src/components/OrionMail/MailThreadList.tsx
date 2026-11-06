@@ -82,7 +82,7 @@ export const MailThreadList: React.FC<MailThreadListProps> = ({
   };
 
   return (
-    <div className="w-80 sm:w-96 h-full shrink-0 border-r border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-[#181818] flex flex-col justify-between">
+    <div className="w-full md:w-80 lg:w-96 h-full shrink-0 border-r border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-[#181818] flex flex-col justify-between">
       {/* Top Header & Search Area */}
       <div className="p-3.5 border-b border-neutral-200/60 dark:border-neutral-800/60 space-y-3 bg-[#ffffff] dark:bg-[#181818]">
         <div className="flex items-center justify-between">

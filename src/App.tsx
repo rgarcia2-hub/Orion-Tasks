@@ -19,10 +19,12 @@ import { AppTransitionScreen } from './components/AppTransitionScreen';
 import { OrionCalendarApp } from './components/OrionCalendar/OrionCalendarApp';
 import { OrionMailApp } from './components/OrionMail/OrionMailApp';
 import { OrionDriveApp } from './components/OrionDrive/OrionDriveApp';
+import { OrionAuthenticatorApp } from './components/OrionAuthenticator/OrionAuthenticatorApp';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { TermsOfServiceView } from './components/TermsOfServiceView';
 import { OrionSpotlight } from './components/OrionSpotlight';
 import { OrionDomainAuthModal } from './components/OrionDomainAuthModal';
+import { OrionMobileNavBar } from './components/OrionMobileNavBar';
 
 function MainLayout() {
   const {
@@ -58,7 +60,7 @@ function MainLayout() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.995 }}
             transition={{ duration: 0.28, ease: 'easeInOut' }}
-            className="w-full"
+            className="w-full pb-16 md:pb-0"
           >
             <OrionWorkspaceHub />
           </motion.div>
@@ -69,7 +71,7 @@ function MainLayout() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.995 }}
             transition={{ duration: 0.28, ease: 'easeInOut' }}
-            className="w-full h-screen"
+            className="w-full h-screen pb-16 md:pb-0"
           >
             <OrionMailApp />
           </motion.div>
@@ -80,7 +82,7 @@ function MainLayout() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.995 }}
             transition={{ duration: 0.28, ease: 'easeInOut' }}
-            className="w-full"
+            className="w-full pb-16 md:pb-0"
           >
             <OrionCalendarApp />
           </motion.div>
@@ -91,9 +93,20 @@ function MainLayout() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.995 }}
             transition={{ duration: 0.28, ease: 'easeInOut' }}
-            className="w-full h-screen"
+            className="w-full h-screen pb-16 md:pb-0"
           >
             <OrionDriveApp />
+          </motion.div>
+        ) : currentApp === 'authenticator' ? (
+          <motion.div
+            key="authenticator-screen"
+            initial={{ opacity: 0, scale: 0.995 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.995 }}
+            transition={{ duration: 0.28, ease: 'easeInOut' }}
+            className="w-full min-h-screen pb-16 md:pb-0"
+          >
+            <OrionAuthenticatorApp />
           </motion.div>
         ) : currentApp === 'privacy' ? (
           <motion.div
@@ -102,7 +115,7 @@ function MainLayout() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="w-full"
+            className="w-full pb-16 md:pb-0"
           >
             <PrivacyPolicyView />
           </motion.div>
@@ -113,7 +126,7 @@ function MainLayout() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="w-full"
+            className="w-full pb-16 md:pb-0"
           >
             <TermsOfServiceView />
           </motion.div>
@@ -124,7 +137,7 @@ function MainLayout() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.995 }}
             transition={{ duration: 0.28, ease: 'easeInOut' }}
-            className="min-h-screen bg-[#ffffff] dark:bg-[#191919] text-neutral-900 dark:text-neutral-100 font-sans antialiased selection:bg-neutral-200 dark:selection:bg-neutral-800 transition-colors flex flex-col justify-between"
+            className="min-h-screen bg-[#ffffff] dark:bg-[#191919] text-neutral-900 dark:text-neutral-100 font-sans antialiased selection:bg-neutral-200 dark:selection:bg-neutral-800 transition-colors flex flex-col justify-between pb-16 md:pb-0"
           >
             <div>
               {/* Top Bar Header */}
@@ -214,6 +227,9 @@ function MainLayout() {
         onClose={() => setUnauthorizedDomainForModal(null)}
         domain={unauthorizedDomainForModal || undefined}
       />
+
+      {/* Global Mobile Bottom Navigation Bar */}
+      <OrionMobileNavBar />
     </>
   );
 }

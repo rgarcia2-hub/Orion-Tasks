@@ -18,6 +18,7 @@ import {
   CornerDownLeft,
   Tag,
   HardDrive,
+  Shield,
 } from 'lucide-react';
 import { AppTask, CalendarEvent, AppNote, HabitItem } from '../types/calendar';
 
@@ -150,6 +151,18 @@ export const OrionSpotlight: React.FC = () => {
       icon: <HardDrive className="w-4 h-4 text-violet-500" />,
       run: () => {
         setCurrentApp('drive');
+        setIsSpotlightOpen(false);
+      },
+    },
+    {
+      id: 'app-authenticator',
+      type: 'action',
+      title: 'Ir a Orion Authenticator',
+      subtitle: 'Generador de códigos 2FA y verificación en dos pasos',
+      category: 'Acciones Rápidas',
+      icon: <Shield className="w-4 h-4 text-emerald-500" />,
+      run: () => {
+        setCurrentApp('authenticator');
         setIsSpotlightOpen(false);
       },
     },

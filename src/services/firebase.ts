@@ -14,6 +14,8 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { AppTask, AppNote } from '../types/calendar';
+import { AuthenticatorToken } from '../types/authenticator';
+import { AuthenticatorSecurityConfig } from '../types/authenticatorSecurity';
 
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
@@ -350,4 +352,216 @@ export async function deleteNoteFromFirestore(userId: string, noteId: string): P
     handleFirestoreError(err, OperationType.DELETE, path);
   }
 }
+
+// ==========================================
+// ORION AUTHENTICATOR (TOTP 2FA CLOUD SYNC)
+// ==========================================
+
+export function sanitizeAuthenticatorTokenForFirestore(
+  token: AuthenticatorToken,
+  userId: string
+): Record<string, any> {
+  const clean: Record<string, any> = {
+    id: token.id,
+    userId,
+    issuer: token.issuer || 'Servicio',
+    account: token.account || '',
+    secret: token.secret || '',
+    algorithm: token.algorithm || 'SHA1',
+    digits: token.digits || 6,
+    period: token.period || 30,
+    icon: token.icon || 'shield',
+    color: token.color || '#7C3AED',
+    folder: token.folder || 'General',
+    isPinned: Boolean(token.isPinned),
+    createdAt: token.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  Object.keys(clean).forEach((k) => {
+    if (clean[k] === undefined) {
+      delete clean[k];
+    }
+  });
+
+  return clean;
+}
+
+/**
+ * Real-time listener for user's Authenticator 2FA tokens.
+ * Automatically synchronizes across all devices signed in with the same account.
+ */
+export function subscribeToUserAuthenticatorTokens(
+  userId: string,
+  onTokensReceived: (tokens: AuthenticatorToken[]) => void,
+  onError?: (err: Error) => void
+): Unsubscribe {
+  const collectionPath = `users/${userId}/authenticator_tokens`;
+  const tokensRef = collection(db, 'users', userId, 'authenticator_tokens');
+
+  return onSnapshot(
+    tokensRef,
+    (snapshot) => {
+      const tokensList: AuthenticatorToken[] = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        tokensList.push({
+          id: docSnap.id,
+          userId,
+          issuer: data.issuer || 'Servicio',
+          account: data.account || '',
+          secret: data.secret || '',
+          algorithm: data.algorithm || 'SHA1',
+          digits: data.digits || 6,
+          period: data.period || 30,
+          icon: data.icon || 'shield',
+          color: data.color || '#7C3AED',
+          folder: data.folder || 'General',
+          isPinned: Boolean(data.isPinned),
+          createdAt: data.createdAt || new Date().toISOString(),
+          updatedAt: data.updatedAt || new Date().toISOString(),
+        });
+      });
+      // Sort pinned first, then by issuer/createdAt
+      tokensList.sort((a, b) => {
+        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+        return a.issuer.localeCompare(b.issuer);
+      });
+      onTokensReceived(tokensList);
+    },
+    (err) => {
+      console.error('Error listening to user authenticator tokens from Firestore:', err);
+      if (onError) onError(err);
+      handleFirestoreError(err, OperationType.GET, collectionPath);
+    }
+  );
+}
+
+/**
+ * Saves or updates a single Authenticator 2FA token to user's Firestore cloud database.
+ */
+export async function saveAuthenticatorTokenToFirestore(
+  userId: string,
+  token: AuthenticatorToken
+): Promise<void> {
+  const path = `users/${userId}/authenticator_tokens/${token.id}`;
+  try {
+    const payload = sanitizeAuthenticatorTokenForFirestore(token, userId);
+    await setDoc(doc(db, 'users', userId, 'authenticator_tokens', token.id), payload);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+/**
+ * Batch saves multiple tokens (e.g. during backup restore or initial migration).
+ */
+export async function batchSaveAuthenticatorTokensToFirestore(
+  userId: string,
+  tokens: AuthenticatorToken[]
+): Promise<void> {
+  const path = `users/${userId}/authenticator_tokens`;
+  try {
+    const batch = writeBatch(db);
+    tokens.forEach((token) => {
+      const docRef = doc(db, 'users', userId, 'authenticator_tokens', token.id);
+      const payload = sanitizeAuthenticatorTokenForFirestore(token, userId);
+      batch.set(docRef, payload);
+    });
+    await batch.commit();
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+/**
+ * Permanently deletes a 2FA token from user's Firestore cloud database.
+ */
+export async function deleteAuthenticatorTokenFromFirestore(
+  userId: string,
+  tokenId: string
+): Promise<void> {
+  const path = `users/${userId}/authenticator_tokens/${tokenId}`;
+  try {
+    await deleteDoc(doc(db, 'users', userId, 'authenticator_tokens', tokenId));
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, path);
+  }
+}
+
+/**
+ * Saves Orion Authenticator security configuration (encrypted PIN hash, passkey, SMS, Email).
+ */
+export async function saveAuthenticatorSecuritySettings(
+  userId: string,
+  config: AuthenticatorSecurityConfig
+): Promise<void> {
+  const path = `users/${userId}/authenticator_settings/security`;
+  try {
+    const payload = {
+      isConfigured: Boolean(config.isConfigured),
+      primaryMethod: config.primaryMethod || 'pin',
+      enabledMethods: config.enabledMethods || { pin: true, passkey: false, email: false, sms: false },
+      pinSalt: config.pinSalt || '',
+      pinHash: config.pinHash || '',
+      pinLength: config.pinLength || 4,
+      passkeyCredentialId: config.passkeyCredentialId || '',
+      passkeyRegisteredName: config.passkeyRegisteredName || '',
+      emailAddress: config.emailAddress || '',
+      phoneNumber: config.phoneNumber || '',
+      recoveryCodes: Array.isArray(config.recoveryCodes) ? config.recoveryCodes : [],
+      usedRecoveryCodes: Array.isArray(config.usedRecoveryCodes) ? config.usedRecoveryCodes : [],
+      autoLockMinutes: typeof config.autoLockMinutes === 'number' ? config.autoLockMinutes : 5,
+      updatedAt: new Date().toISOString(),
+    };
+    await setDoc(doc(db, 'users', userId, 'authenticator_settings', 'security'), payload);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+/**
+ * Real-time subscription to user's Authenticator security settings.
+ */
+export function subscribeToAuthenticatorSecuritySettings(
+  userId: string,
+  onUpdate: (config: AuthenticatorSecurityConfig | null) => void,
+  onError?: (err: Error) => void
+): Unsubscribe {
+  const collectionPath = `users/${userId}/authenticator_settings/security`;
+  const docRef = doc(db, 'users', userId, 'authenticator_settings', 'security');
+
+  return onSnapshot(
+    docRef,
+    (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        onUpdate({
+          isConfigured: Boolean(data.isConfigured),
+          primaryMethod: data.primaryMethod || 'pin',
+          enabledMethods: data.enabledMethods || { pin: true, passkey: false, email: false, sms: false },
+          pinSalt: data.pinSalt,
+          pinHash: data.pinHash,
+          pinLength: data.pinLength || 4,
+          passkeyCredentialId: data.passkeyCredentialId,
+          passkeyRegisteredName: data.passkeyRegisteredName,
+          emailAddress: data.emailAddress,
+          phoneNumber: data.phoneNumber,
+          recoveryCodes: data.recoveryCodes || [],
+          usedRecoveryCodes: data.usedRecoveryCodes || [],
+          autoLockMinutes: typeof data.autoLockMinutes === 'number' ? data.autoLockMinutes : 5,
+          updatedAt: data.updatedAt || new Date().toISOString(),
+        });
+      } else {
+        onUpdate(null);
+      }
+    },
+    (err) => {
+      console.warn('Error reading authenticator security settings:', err);
+      if (onError) onError(err);
+    }
+  );
+}
+
+
 

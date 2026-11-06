@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useCalendar } from '../context/CalendarContext';
 import { OrionLogo } from './OrionLogo';
 import { GoogleAuthButton } from './GoogleAuthButton';
 import { BetaFlaskIcon } from './BetaFlaskIcon';
+import { isBannerDismissed, dismissBannerPermanently } from '../utils/dismissedNotifs';
 import {
   Calendar as CalendarIcon,
   CalendarDays,
   Mail,
   HardDrive,
+  Shield,
   Moon,
   Sun,
   Settings as SettingsIcon,
@@ -48,6 +50,13 @@ export const OrionWorkspaceHub: React.FC = () => {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSsoBannerDismissed, setIsSsoBannerDismissed] = useState<boolean>(() => {
+    return isBannerDismissed('hub_sso_unified_pill', user?.uid || user?.email);
+  });
+
+  useEffect(() => {
+    setIsSsoBannerDismissed(isBannerDismissed('hub_sso_unified_pill', user?.uid || user?.email));
+  }, [user?.uid, user?.email]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -113,6 +122,20 @@ export const OrionWorkspaceHub: React.FC = () => {
       ),
       action: () => navigateToApp('drive'),
     },
+    {
+      id: 'authenticator',
+      name: 'Authenticator',
+      fullName: 'Orion Authenticator',
+      isAvailable: true,
+      badge: 'Nuevo',
+      description: 'Generador de códigos 2FA con sincronización en la nube y escaneo de QR',
+      icon: (
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-sm transition-transform duration-200 group-hover:scale-105">
+          <Shield className="w-6 h-6" />
+        </div>
+      ),
+      action: () => navigateToApp('authenticator'),
+    },
   ];
 
   return (
@@ -158,6 +181,14 @@ export const OrionWorkspaceHub: React.FC = () => {
                   {(user.displayName || user.email || 'U')[0].toUpperCase()}
                 </div>
               )}
+
+              <button
+                onClick={logoutGoogle}
+                title="Cerrar sesión de Orion Workspace"
+                className="p-1.5 text-neutral-400 hover:text-rose-500 transition-colors rounded-lg hover:bg-neutral-200/50 dark:hover:bg-neutral-800 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           ) : (
             <GoogleAuthButton compact />
@@ -181,32 +212,83 @@ export const OrionWorkspaceHub: React.FC = () => {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
-          className="text-center mb-12 sm:mb-16 space-y-2"
+          className="text-center mb-10 sm:mb-14 space-y-3"
         >
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
             Welcome
           </h1>
-          <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 max-w-md mx-auto mb-4">
+          <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 max-w-md mx-auto">
             Privacy and security starts here
           </p>
 
+          {/* Unified Workspace SSO Indicator or Login Callout */}
+          <AnimatePresence>
+            {user && !isSsoBannerDismissed && (
+              <motion.div
+                key="sso-unified-banner"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="group inline-flex items-center gap-2 pl-3.5 pr-2 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-800/70 text-xs text-emerald-800 dark:text-emerald-300 shadow-2xs transition-all hover:shadow-xs"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span>
+                  Sesión unificada activa con <span className="font-semibold">{user.email}</span> (Drive, Mail, Tasks y Calendar)
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    dismissBannerPermanently('hub_sso_unified_pill', user.uid || user.email);
+                    setIsSsoBannerDismissed(true);
+                  }}
+                  title="Cerrar permanentemente para esta cuenta"
+                  className="opacity-0 group-hover:opacity-100 p-0.5 text-emerald-700 hover:text-emerald-950 dark:text-emerald-300 dark:hover:text-white hover:bg-emerald-200/60 dark:hover:bg-emerald-900/60 rounded-full transition-opacity cursor-pointer ml-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {!user && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#202020] border border-neutral-200/80 dark:border-neutral-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-left max-w-lg mx-auto"
+            >
+              <div className="space-y-0.5">
+                <div className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Inicia sesión una vez para todas tus apps</span>
+                </div>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                  Accede automáticamente a Drive, Mail, Tasks y Calendar con tu cuenta.
+                </p>
+              </div>
+              <GoogleAuthButton compact />
+            </motion.div>
+          )}
+
           {/* Liquid Glass Spotlight Trigger Bar */}
-          <button
-            onClick={() => setIsSpotlightOpen(true)}
-            className="liquid-glass rounded-2xl px-4 py-2.5 max-w-md w-full mx-auto flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-300 hover:scale-[1.01] transition-all cursor-pointer shadow-lg group border border-white/40 dark:border-white/10"
-          >
-            <div className="flex items-center gap-2.5">
-              <Search className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
-              <span className="font-medium text-neutral-500 dark:text-neutral-400">Buscar en todo Orion...</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-400">
-              <kbd className="px-1.5 py-0.5 rounded bg-neutral-200/60 dark:bg-neutral-800 text-neutral-500 border border-neutral-300/40 dark:border-neutral-700">⌘K</kbd>
-            </div>
-          </button>
+          <div className="pt-2">
+            <button
+              onClick={() => setIsSpotlightOpen(true)}
+              className="liquid-glass rounded-2xl px-4 py-2.5 max-w-md w-full mx-auto flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-300 hover:scale-[1.01] transition-all cursor-pointer shadow-lg group border border-white/40 dark:border-white/10"
+            >
+              <div className="flex items-center gap-2.5">
+                <Search className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
+                <span className="font-medium text-neutral-500 dark:text-neutral-400">Buscar en todo Orion...</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-400">
+                <kbd className="px-1.5 py-0.5 rounded bg-neutral-200/60 dark:bg-neutral-800 text-neutral-500 border border-neutral-300/40 dark:border-neutral-700">⌘K</kbd>
+              </div>
+            </button>
+          </div>
         </motion.div>
 
-        {/* 4 App Cards Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-10 items-center justify-center max-w-3xl w-full">
+        {/* App Cards Grid - 2 cols on mobile, 3 on tablet, 5 on desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6 items-center justify-center max-w-4xl w-full">
           {apps.map((app, index) => (
             <motion.div
               key={app.id}
@@ -256,8 +338,23 @@ export const OrionWorkspaceHub: React.FC = () => {
 
                 {/* Status Indicator under Orion Apps */}
                 {app.isAvailable && (
-                  <span className="mt-0.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 group-hover:text-indigo-700 dark:group-hover:text-indigo-300 flex items-center gap-0.5 transition-colors">
-                    <span>Abrir /{app.id}</span>
+                  <span className="mt-0.5 text-[10px] font-medium flex items-center gap-1 transition-colors">
+                    {user ? (
+                      app.id === 'authenticator' ? (
+                        <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold" title="Bóveda protegida por PIN/Passkey independiente">
+                          <span>🔒 Requiere PIN</span>
+                        </span>
+                      ) : (
+                        <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span>Conectado</span>
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-neutral-500 dark:text-neutral-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                        Abrir /{app.id}
+                      </span>
+                    )}
                   </span>
                 )}
               </motion.button>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCalendar } from '../context/CalendarContext';
 import { AppTask, TaskStatus, TaskPriority } from '../types/calendar';
 import { formatEventTimeRange } from '../utils/calendarData';
@@ -25,9 +25,11 @@ import {
   FileText,
   Flame,
   CalendarDays,
+  X,
 } from 'lucide-react';
 import { HabitsSidebar } from './HabitsSidebar';
 import { TasksTimelineView } from './TasksTimelineView';
+import { isBannerDismissed, dismissBannerPermanently } from '../utils/dismissedNotifs';
 
 export const TasksKanbanView: React.FC = () => {
   const {
@@ -55,6 +57,7 @@ export const TasksKanbanView: React.FC = () => {
   } = useCalendar();
 
   const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'timeline'>('kanban');
+  const [mobileActiveColumn, setMobileActiveColumn] = useState<TaskStatus | 'all'>('pending');
   const [isHabitsOpen, setIsHabitsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<'all' | TaskPriority>('all');
@@ -67,6 +70,15 @@ export const TasksKanbanView: React.FC = () => {
   // Smooth Drag & Drop states
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverColId, setDragOverColId] = useState<TaskStatus | null>(null);
+
+  // Permanently dismissed banner state per account
+  const [isDragTipDismissed, setIsDragTipDismissed] = useState<boolean>(() => {
+    return isBannerDismissed('kanban_drag_fluid_tip', user?.uid || user?.email);
+  });
+
+  useEffect(() => {
+    setIsDragTipDismissed(isBannerDismissed('kanban_drag_fluid_tip', user?.uid || user?.email));
+  }, [user?.uid, user?.email]);
 
   const handleDropOnColumn = (targetCol: TaskStatus) => {
     if (draggedTaskId) {
@@ -385,54 +397,115 @@ export const TasksKanbanView: React.FC = () => {
       </div>
 
       {/* Helpful Tip about smooth drag-and-drop */}
-      <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-blue-50/70 via-purple-50/40 to-transparent dark:from-blue-950/30 dark:via-purple-950/20 dark:to-transparent border border-blue-100 dark:border-blue-900/40 text-xs text-blue-900 dark:text-blue-200 shadow-2xs">
-        <div className="flex items-center gap-2">
-          <GripVertical className="w-4 h-4 text-blue-500 shrink-0" />
-          <span>
-            <strong className="font-semibold text-blue-950 dark:text-blue-100">Arrastre fluido activo:</strong> Arrastra y suelta cualquier tarjeta libremente entre columnas para cambiar su estado. Animación suave sin necesidad de flechas.
-          </span>
-        </div>
-        <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 shrink-0 hidden sm:inline font-medium">
-          ✨ Arrastrar y Soltar
-        </span>
-      </div>
+      <AnimatePresence>
+        {!isDragTipDismissed && (
+          <motion.div
+            key="kanban-drag-fluid-tip"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+            className="group relative flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-blue-50/70 via-purple-50/40 to-transparent dark:from-blue-950/30 dark:via-purple-950/20 dark:to-transparent border border-blue-100 dark:border-blue-900/40 text-xs text-blue-900 dark:text-blue-200 shadow-2xs transition-all overflow-hidden"
+          >
+            <div className="flex items-center gap-2 min-w-0 pr-2">
+              <GripVertical className="w-4 h-4 text-blue-500 shrink-0" />
+              <span>
+                <strong className="font-semibold text-blue-950 dark:text-blue-100">Arrastre fluido activo:</strong> Arrastra y suelta cualquier tarjeta libremente entre columnas para cambiar su estado. Animación suave sin necesidad de flechas.
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 hidden sm:inline font-medium">
+                ✨ Arrastrar y Soltar
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  dismissBannerPermanently('kanban_drag_fluid_tip', user?.uid || user?.email);
+                  setIsDragTipDismissed(true);
+                }}
+                title="Cerrar permanentemente para esta cuenta"
+                className="opacity-0 group-hover:opacity-100 p-1 text-blue-700 dark:text-blue-300 hover:text-blue-950 dark:hover:text-white hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-opacity cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* VIEWS CONTAINER (KANBAN / TIMELINE / LIST) + HABITS SIDEBAR */}
       <div className="flex items-start gap-6">
         <div className="flex-1 min-w-0">
           {viewMode === 'kanban' ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          {columns.map((col) => {
-            const columnTasks = filteredTasks.filter((t) => t.status === col.id);
-            const isColumnActive = dragOverColId === col.id;
+            <>
+              {/* Mobile Column Segmented Selector (< md) */}
+              <div className="flex md:hidden items-center gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl overflow-x-auto no-scrollbar mb-4 border border-neutral-200/60 dark:border-neutral-700/60">
+                {columns.map((col) => {
+                  const count =
+                    col.id === 'completed'
+                      ? historicalCompletedCount
+                      : filteredTasks.filter((t) => t.status === col.id).length;
+                  const isActive = mobileActiveColumn === col.id;
 
-            return (
-              <div
-                key={col.id}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = 'move';
-                  if (dragOverColId !== col.id) setDragOverColId(col.id);
-                }}
-                onDragEnter={(e) => {
-                  e.preventDefault();
-                  setDragOverColId(col.id);
-                }}
-                onDragLeave={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                    if (dragOverColId === col.id) setDragOverColId(null);
-                  }
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  handleDropOnColumn(col.id);
-                }}
-                className={`rounded-2xl border p-3.5 space-y-3 transition-all duration-200 ${
-                  isColumnActive
-                    ? 'bg-blue-50/50 dark:bg-blue-950/30 border-blue-400 dark:border-blue-500 ring-2 ring-blue-400/30 shadow-md scale-[1.01]'
-                    : 'bg-[#fcfcfb] dark:bg-[#1e1e1e] border-[#e9e9e7] dark:border-[#2e2e2e]'
-                }`}
-              >
+                  return (
+                    <button
+                      key={col.id}
+                      type="button"
+                      onClick={() => setMobileActiveColumn(col.id)}
+                      className={`flex-1 min-w-[95px] py-2 px-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-xs'
+                          : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
+                      }`}
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: col.color }}
+                      />
+                      <span className="truncate">{col.title}</span>
+                      <span className="text-[10px] font-mono tabular-nums opacity-75">
+                        ({count})
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-start">
+                {columns.map((col) => {
+                  const columnTasks = filteredTasks.filter((t) => t.status === col.id);
+                  const isColumnActive = dragOverColId === col.id;
+                  const isVisibleOnMobile =
+                    mobileActiveColumn === 'all' || mobileActiveColumn === col.id;
+
+                  return (
+                    <div
+                      key={col.id}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        if (dragOverColId !== col.id) setDragOverColId(col.id);
+                      }}
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                        setDragOverColId(col.id);
+                      }}
+                      onDragLeave={(e) => {
+                        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                          if (dragOverColId === col.id) setDragOverColId(null);
+                        }
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        handleDropOnColumn(col.id);
+                      }}
+                      className={`${
+                        isVisibleOnMobile ? 'block' : 'hidden md:block'
+                      } rounded-2xl border p-3.5 space-y-3 transition-all duration-200 ${
+                        isColumnActive
+                          ? 'bg-blue-50/50 dark:bg-blue-950/30 border-blue-400 dark:border-blue-500 ring-2 ring-blue-400/30 shadow-md scale-[1.01]'
+                          : 'bg-[#fcfcfb] dark:bg-[#1e1e1e] border-[#e9e9e7] dark:border-[#2e2e2e]'
+                      }`}
+                    >
                 {/* Column Header */}
                 <div className="flex items-center justify-between px-2 py-1">
                   <div className="flex items-center gap-2">
@@ -629,7 +702,8 @@ export const TasksKanbanView: React.FC = () => {
             );
           })}
         </div>
-      ) : viewMode === 'timeline' ? (
+      </>
+    ) : viewMode === 'timeline' ? (
         /* TIMELINE VIEW */
         <TasksTimelineView
           tasks={filteredTasks}

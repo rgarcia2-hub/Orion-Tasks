@@ -1,0 +1,5 @@
+{
+  "summary": "Arquitectura de seguridad criptográfica multicapa para Orion Authenticator: PIN con salt SHA-256, Passkeys biométricas WebAuthn, códigos OTP por Correo/SMS, códigos de recuperación de emergencia y bloqueo automático sincronizado en Firestore.",
+  "updatedAt": "2026-11-05T11:41:04.535432921Z",
+  "userFacing": true
+}

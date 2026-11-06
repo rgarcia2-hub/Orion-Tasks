@@ -46,6 +46,16 @@ service cloud.firestore {
         allow create, update: if isOwner(userId) && isValidId(emailId);
         allow delete: if isOwner(userId);
       }
+
+      match /authenticator_tokens/{tokenId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(tokenId);
+        allow delete: if isOwner(userId);
+      }
+
+      match /authenticator_settings/{settingId} {
+        allow read, write: if isOwner(userId);
+      }
     }
   }
 }

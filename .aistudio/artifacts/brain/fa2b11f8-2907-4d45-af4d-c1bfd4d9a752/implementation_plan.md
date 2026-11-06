@@ -1,155 +1,153 @@
-# Orion Workspace: Liquid Glass Spotlight & Ecosistema Inteligente
+# Orion Workspace: Arquitectura Móvil, Escala y Distribución Ergonómica
 
-Plan arquitectónico integral para potenciar las aplicaciones de Orion Workspace (Mail, Calendar, Tasks y Notes) con herramientas de productividad avanzadas, búsqueda universal Spotlight con estética Apple Liquid Glass, análisis cognitivo de correos con IA y seguimiento de hábitos diarios.
+Plan arquitectónico y de diseño para transformar Orion Workspace en una suite web touch-first de alto rendimiento, optimizada para dispositivos móviles (375px–430px) sin comprometer la experiencia de escritorio (1440px).
 
 ---
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> A continuación se resumen las decisiones clave confirmadas en la fase de clarificación interactiva y los patrones arquitectónicos acordados para la ejecución:
+> A continuación se detallan las decisiones clave confirmadas en la fase de clarificación interactiva para gobernar el diseño y comportamiento móvil:
 
-- **Spotlight Universal (Apple Liquid Glass)**: Activación mediante atajo global (`Cmd/Ctrl + K`) y botón visible en la barra superior. Contenedor flotante con desenfoque de fondo ultra suave (`backdrop-blur-2xl`), borde especular de vidrio líquido, animación fluida elástica (`spring physics`) y búsqueda instantánea en todas las entidades (Eventos, Tareas, Correos y Notas).
-- **IA Correo a Tarea con Animación Glow**: Botón en la lectura de correos que activa el análisis inteligente con Gemini. Mientras el modelo procesa la información, los caracteres y párrafos del correo realizan un efecto de pulso luminoso (*holographic text glow*). Al concluir, se abre un diálogo de vista previa editable con los campos extraídos (título, prioridad, fecha límite y subtareas) antes de guardar en el tablero.
-- **Sección de Hábitos en Orion Tasks**: Panel lateral desplegable con cuadrícula de días de la semana, contadores de rachas activas (*streaks*), casillas de verificación rápida y persistencia en Firestore/Local.
-- **Línea de Tiempo (Timeline) en Orion Tasks**: Conmutador de vista entre Kanban tradicional y línea de tiempo horizontal interactiva agrupada por fecha de vencimiento.
-- **Orion Notes Interactivo & Exportable**: Soporte nativo para casillas de verificación interactivas `[x]` con barra de progreso de completado, buscador en vivo dentro del editor y exportación directa a formato Markdown limpio y visualización imprimible para PDF.
-- **Orion Calendar Pro**: Algoritmo visual de detección de conflictos para eventos solapados, widget meteorológico sutil en las cabeceras de los días y generación en 1 clic del resumen de agenda diario para portapapeles.
-- **Widget "Mi Día" en el Hub**: Tarjeta de bienvenida en el panel principal con resumen consolidado de las 4 aplicaciones.
+- [x] **Navegación Principal Móvil (Completado)**: Barra de navegación inferior anclada (`OrionMobileNavBar`) con accesos directos rápidos a Hub, Tasks, Calendario, Mail y menú deslizable (*Bottom Sheet Drawer* `OrionMobileAppDrawer`).
+- [x] **Escalado y Distribución de Vistas Densas (Completado)**: Pestañas deslizables para columnas Kanban en móvil (`TasksKanbanView`), vista dividida colapsable con botón de volver para Orion Mail (`MailReaderView` y `MailThreadList`), visualización de cuadrícula y pestañas de sección para Orion Drive (`OrionDriveApp`), y distribución de agenda/mes en Orion Calendar.
+- [x] **Controles Táctiles y Ergonomía (Completado)**: Botón de acción flotante (FAB) para subidas rápidas en Drive, hitboxes táctiles $\ge 44\text{px}$, metadatos de viewport PWA (`viewport-fit=cover`), y cumplimiento del límite del 15% de superficie fija.
 
 ---
 
 ## 1. Overview & Core Concept
 
-Orion Workspace evoluciona de aplicaciones individuales conectadas hacia un **sistema operativo de productividad unificado**. Los usuarios pueden procesar información entrante en su correo y convertirla de inmediato en tareas ejecutables con asistencia de IA, organizar sus rutinas mediante el panel de Hábitos y consultar cualquier elemento de la plataforma en milisegundos mediante el buscador universal Spotlight.
+### A. Propósito de la Transformación Móvil
+Orion Workspace pasa de ser un entorno pensado para monitor de escritorio a un **sistema operativo de productividad responsivo de clase mundial**. En smartphone, los elementos se reorganizan siguiendo las leyes ergonómicas de la zona del pulgar (*Thumb Zone*), eliminando barras laterales pesadas y tablas comprimidas ilegibles.
 
-### Target Persona & Context
-- Usuarios que gestionan múltiples responsabilidades y necesitan una interfaz rápida, sin fricciones ni recargas, con transiciones orgánicas y diseño cuidado al detalle inspirado en macOS y visionOS.
+### B. Audiencia y Contexto de Uso
+- **Usuario móvil activo**: Personas que revisan su agenda de reuniones, marcan tareas completadas, consultan o suben archivos en Orion Drive, leen correos entrantes y generan códigos 2FA desde su teléfono con una sola mano.
 
-### Valor Principal
-- Eliminación del copiado manual entre herramientas: un correo se transforma en tarea con fechas detectadas por IA; una tarea se enlaza con notas de reunión; y la barra Spotlight permite saltar a cualquier dato sin navegar de pantalla en pantalla.
+### C. Valor Clave
+- **Cero zoom accidental**: Todo el contenido se ajusta a la anchura del dispositivo sin desbordamiento horizontal (`overflow-x-hidden`).
+- **Acceso en milisegundos**: Las acciones prioritarias (crear tarea, nuevo evento, añadir token 2FA, subir archivo) están al alcance del pulgar en la parte inferior de la pantalla.
 
 ---
 
 ## 2. User Experience & Visual Design
 
-### A. Spotlight Universal (Liquid Glass Aesthetic)
-- **Activación**: Pulsación de `Cmd + K` / `Ctrl + K` desde cualquier pantalla, o clic en el botón de búsqueda estilizado en la cabecera.
-- **Aspecto Visual**: Píldora flotante centrada con fondo semitransparente de alta refracción (`rgba(255, 255, 255, 0.65)` en modo claro y `rgba(24, 24, 27, 0.75)` en modo oscuro), `backdrop-blur-2xl`, sombra envolvente multicapa y borde tenue con destello superior (*specular highlight*).
-- **Micro-interacciones**: Entrada mediante expansión elástica con Framer Motion, resaltado de teclas de navegación (`↑` `↓` `Enter` `Esc`), iconos temáticos por aplicación y atajo rápido para abrir directamente el resultado.
+### A. Distribución Ergonómica por Zonas del Pulgar
 
-### B. Análisis IA de Correo con Efecto Glow
-- **Activación**: Botón destacado *"Crear Tarea con IA"* en la barra de herramientas del lector de correos.
-- **Efecto de Animación**: Mientras la petición procesa en el servidor, el texto del correo adopta un degradado animado continuo (`background-clip: text` con animación de shimmer en tonos violeta y azul celeste) transmitiendo la sensación de escaneo en tiempo real.
-- **Modal de Confirmación**: Muestra la tarjeta de tarea prediseñada permitiendo ajustar título, lista de subtareas detectadas, fecha estimada y prioridad antes de confirmarla.
+```
+┌───────────────────────────────────────┐  ▲
+│ [App Switcher / Logo]    [User Avatar]│  │ Zona Difícil (Hard Reach): 
+│ Barra Superior Compacta (52px)        │  │ Encabezados, títulos y filtros
+├───────────────────────────────────────┤  ▼
+│                                       │  ▲
+│  [ Pestañas Deslizables de Vista ]    │  │
+│                                       │  │
+│  • Tarjeta de Elemento 1 (56px)       │  │ Zona de Extensión (Stretch Zone):
+│  • Tarjeta de Elemento 2 (56px)       │  │ Feed de contenido principal,
+│  • Tarjeta de Elemento 3 (56px)       │  │ tarjetas verticales, lectura
+│                                       │  │
+├───────────────────────────────────────┤  ▼
+│  [ + Botón de Acción Principal ]      │  ▲ Zona Natural del Pulgar (Thumb Zone):
+├───────────────────────────────────────┤  │ Acciones primarias y barra de
+│ [Hub] [Tasks] [Cal] [Mail] [Apps ☰]   │  │ navegación inferior anclada (60px)
+└───────────────────────────────────────┘  ▼
+```
 
-### C. Orion Tasks: Hábitos y Vista Timeline
-- **Panel Lateral de Hábitos**:
-  - Lista de hábitos diarios (ej: *Lectura*, *Revisión Inbox Zero*, *Ejercicio*, *Planificación del Día*).
-  - Selector de días (L, M, X, J, V, S, D) con indicador de racha de días consecutivos completados.
-- **Vista Timeline**:
-  - Pestaña alternativa al tablero Kanban.
-  - Eje cronológico semanal/mensual que ubica visualmente las tarjetas según su fecha de vencimiento (`dueDateTime`), permitiendo identificar semanas con sobrecarga de trabajo.
+### B. Barra de Navegación Inferior Móvil (`OrionMobileNavBar`)
+- **Fijada en la base**: `fixed bottom-0 left-0 right-0 z-40 bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border-t border-neutral-200/80 dark:border-neutral-800`.
+- **Estructura de 5 destinos táctiles**:
+  1. **Hub**: Vista general y widget de bienvenida.
+  2. **Tasks / Tareas**: Tablero Kanban adaptado con pestañas por estado y panel de hábitos.
+  3. **Calendario**: Vista combinada de agenda diaria y eventos del mes.
+  4. **Mail**: Bandeja de entrada compacta con escaneo rápido y acciones deslizables.
+  5. **Más Apps (Drawer ☰)**: Abre el panel inferior que da acceso instantáneo a Orion Drive, Orion Authenticator, Copias de Seguridad y Modo Oscuro.
+- **Micro-interacción**: Indicador visual activo mediante sutil punto de acento y realce tipográfico; respuesta táctil en $\le 120\text{ms}$.
 
-### D. Orion Notes: Checklists y Exportación
-- **Checklists Vivas**: Conversión de sintaxis `- [ ]` y `- [x]` en casillas de verificación interactivas dentro de la vista previa de la nota, calculando automáticamente el porcentaje de avance.
-- **Exportación**: Botón de menú para descargar la nota en archivo `.md` estructurado y botón de exportación a PDF aprovechando el formateo tipográfico nativo de impresión.
-- **Buscador en Vivo**: Filtro instantáneo sobre títulos y párrafos con resaltado amarillo de coincidencias.
+### C. Panel Inferior de Aplicaciones (`OrionMobileAppDrawer`)
+- Panel deslizante con fondo translúcido (*Liquid Glass*), esquinas superiores redondeadas (`rounded-t-3xl`), tirador visual táctil (`w-10 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-700 mx-auto mt-2.5 mb-4`) y cierre mediante gesto hacia abajo o botón exterior.
+- Cuadrícula de iconos grandes (48x48px) para saltar con fluidez a cualquier rincón de la suite.
 
-### E. Orion Calendar: Conflictos y Pronóstico
-- **Detector de Solapamientos**: Indicador de advertencia sutil en eventos que comparten la misma franja horaria en el mismo día, desplegando una píldora indicadora *"Conflicto con [Evento X]"*.
-- **Widget de Clima**: Mini-indicador en las columnas del calendario con icono meteorológico y temperatura orientativa.
-- **Compartir Agenda**: Botón para copiar al portapapeles el resumen estructurado de las reuniones del día.
+### D. Adaptación de Vistas Clave en Móvil
+
+1. **Orion Tasks (Kanban & Timeline)**:
+   - En pantallas pequeñas ($< 768\text{px}$), en lugar de mostrar 4 columnas horizontales aplastadas, se despliega un **selector horizontal de columnas en píldoras** (`Por Hacer (3) | En Progreso (2) | Completado (5)`) que filtra la columna activa al instante con animación lateral suave.
+   - Panel de Hábitos: Se muestra como pestaña secundaria accesible con un toque, con casillas de verificación de $44\text{px}$.
+2. **Orion Drive**:
+   - Selector de vista lista/cuadrícula optimizado: La lista se convierte en filas táctiles de $60\text{px}$ con información clara (icono de tipo, nombre, peso y fecha).
+   - Menú contextual: En móvil se abre automáticamente como un *Bottom Action Sheet* en lugar de un menú flotante milimétrico.
+3. **Orion Calendar**:
+   - Cabecera de mes con carrusel horizontal de días (`Lun 14`, `Mar 15`, `Mié 16`) y vista vertical de **Agenda del Día** con franjas horarias legibles y aviso de conflictos.
+4. **Orion Mail**:
+   - Vista dividida colapsable: Si se selecciona un correo, la lista se retira limpiamente con animación `slide-in` para dar todo el ancho a la lectura y al análisis con IA. Botón "Volver" con tamaño táctil en la barra superior.
+5. **Orion Authenticator**:
+   - Teclado numérico ubicado en el tercio inferior del teléfono para ingresar el PIN sin estirar la mano.
+   - Tarjetas de códigos TOTP a ancho completo con botón táctil directo de copiado de 48px y barra de progreso circular visible.
+
+### E. Tipografía, Tamaños y Regla de Superficie Fija (15% Cap)
+- **Top Bar Móvil**: Altura máxima de $52\text{px}$ (`h-13`), garantizando que la suma de Top Bar ($52\text{px}$) + Bottom Nav ($60\text{px}$) no supere nunca el 15% del alto de pantalla de un smartphone típico (667px–844px), dejando más del 85% libre para el contenido.
+- **Tamaños de fuente adaptados**:
+  - Títulos principales en móvil: `text-lg` a `text-xl font-bold` (en lugar de `text-3xl`).
+  - Textos descriptivos: `text-xs` y `text-sm` con interlineado holgado (`leading-relaxed`).
+  - Metadatos: `text-[11px]` con separadores tipográficos limpios (`·`), sin cajas de píldoras estáticas.
 
 ---
 
 ## 3. Key Product Decisions & Trade-Offs
 
-### Decisión 1: Modal Editable vs Inserción Directa de Tarea desde Correo
-- **Elección**: Modal de vista previa editable (según confirmación del usuario).
-- **Razón**: Permite al usuario revisar las fechas o subtareas inferidas por el modelo antes de que impacten en su tablero Kanban, garantizando total control y confianza en la IA.
-- **Alternativa descartada**: Creación automática silenciosa, que podría generar duplicados o interpretaciones erróneas de fechas relativas.
+### Decisión 1: Barra de Navegación Inferior vs Menú Lateral Hamburguesa
+- **Enfoque Elegido**: Barra inferior táctil anclada fija con botón de menú deslizable (*Bottom Sheet*).
+- **Justificación**: En teléfonos modernos de pantalla alargada (19.5:9), las esquinas superiores izquierdas son inaccesibles con una sola mano. La barra inferior sitúa las 4 herramientas principales al alcance del pulgar sin abrir menús adicionales.
+- **Alternativa descartada**: Menú hamburguesa tradicional arriba a la izquierda, que obliga al usuario a usar las dos manos.
 
-### Decisión 2: Hábitos como Panel Lateral en Tasks
-- **Elección**: Panel lateral dedicado desplegable con seguimiento de rachas.
-- **Razón**: Mantiene el foco del tablero Kanban en tareas orientadas a proyectos y objetivos concretos, reservando el seguimiento de constancia para los hábitos diarios sin contaminar las columnas de estado.
-- **Alternativa descartada**: Tratar cada hábito como una tarjeta Kanban normal, lo que saturaría las columnas de tareas con elementos repetitivos.
+### Decisión 2: Pestañas de Columna para Kanban en Móvil vs Scroll Horizontal Infinito
+- **Enfoque Elegido**: Pestañas de segmento superior deslizables para alternar la columna visible.
+- **Justificación**: El scroll horizontal infinito en móvil colisiona con los gestos de arrastrar tarjetas y provoca pérdidas de contexto visual. Con pestañas, el usuario sabe con certeza en qué columna está y las tarjetas ocupan el 100% del ancho legible.
+- **Alternativa descartada**: Columnas en cuadrícula minúscula de 150px, que mutilan los títulos de las tareas.
 
-### Decisión 3: Arquitectura del Spotlight Universal
-- **Elección**: Estado global en el contexto de la aplicación que indexa en memoria las tareas, eventos, notas y correos previamente cargados.
-- **Razón**: Respuestas inmediatas a cada tecla (0ms de latencia) y capacidad de ejecutar acciones rápidas (cambiar de app, abrir modales) sin llamadas de red adicionales.
+### Decisión 3: Modales como Bottom Sheets en Pantallas Móviles
+- **Enfoque Elegido**: En pantallas móviles (`sm:hidden`), todos los modales principales (Nueva Tarea, Detalles, Crear Carpeta, Compartir) se transforman automáticamente en paneles deslizantes desde abajo (*Bottom Sheets*).
+- **Justificación**: Sigue el estándar natural de iOS y Android para formularios y paneles de acción.
+- **Alternativa descartada**: Modales centrados con scroll interno en marcos reducidos de 300px.
 
 ---
 
 ## 4. Technical Architecture & Data Strategy
 
-### System Layout & Component Flow
+### Diagrama de Arquitectura y Componentes Móviles
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        ORION WORKSPACE HUB                             │
+│                        ORION WORKSPACE CORE                            │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │ Spotlight Universal Search Modal (Cmd+K / Apple Liquid Glass)    │  │
-│  │ ├─ Indexer: Tasks ⇄ Events ⇄ Emails ⇄ Notes                      │  │
-│  │ └─ Fast Actions: Switch Apps, Create New Item, Open Reader       │  │
+│  │ Mobile Viewport Detector Hook (useIsMobile: window.matchMedia)   │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                        │
-│  ┌──────────────────────┐  ┌────────────────────────────────────────┐  │
-│  │ Widget "Mi Día"      │  │ App Switcher & Navigation Bar          │  │
-│  └──────────────────────┘  └────────────────────────────────────────┘  │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │
-       ┌────────────────────────────┼────────────────────────────┐
-       ▼                            ▼                            ▼
-┌───────────────────┐      ┌───────────────────┐      ┌───────────────────┐
-│    ORION MAIL     │      │   ORION CALENDAR  │      │    ORION TASKS    │
-│ ├─ Email Reader   │      │ ├─ Conflict Guard │      │ ├─ Kanban Board   │
-│ ├─ AI Task Parser │      │ ├─ Weather Widget │      │ ├─ Timeline View  │
-│ │  (Text Glow FX) │      │ ├─ Copy Agenda    │      │ └─ Hábitos Panel  │
-│ └─ Task Preview   │      │ └─ Meeting Notes  │         (Daily Streaks)  │
-└─────────┬─────────┘      └─────────┬─────────┘      └─────────┬─────────┘
-          │                          │                          │
-          └──────────────────────────┼──────────────────────────┘
-                                     ▼
-                          ┌─────────────────────┐
-                          │     ORION NOTES     │
-                          │ ├─ Live Checklists  │
-                          │ ├─ Text Search      │
-                          │ ├─ PDF / MD Export  │
-                          │ └─ Linked Entities  │
-                          └──────────┬──────────┘
-                                     │
-                                     ▼
-                          ┌─────────────────────┐
-                          │   SERVICES LAYER    │
-                          │ ├─ Gemini API Route │
-                          │ ├─ Firestore / Sync │
-                          │ └─ Google API Auth  │
-                          └─────────────────────┘
+       ┌────────────────────────────┴────────────────────────────┐
+       ▼                                                         ▼
+┌─────────────────────────────────────┐   ┌─────────────────────────────────────┐
+│       DESKTOP VIEWPORT (≥768px)     │   │        MOBILE VIEWPORT (<768px)     │
+│ ├─ Desktop Top Header & AppSwitcher │   │ ├─ Mobile Compact Top Bar (52px)    │
+│ ├─ Multi-Column Kanban Board        │   │ ├─ Swipeable Column Segmented Tabs  │
+│ ├─ Full Multi-Folder Drive Grid     │   │ ├─ Vertical Single-Col Card Stream  │
+│ └─ Split-Screen Email Reader        │   │ ├─ Slide-In Mobile Email Reader     │
+│                                     │   │ ├─ Bottom Action Sheets for Modals  │
+│                                     │   │ └─ OrionMobileNavBar (Fixed Bottom) │
+│                                     │   │     ├─ 4 Primary App Tabs (Thumb)   │
+│                                     │   │     └─ App Drawer Sheet (☰ Más)     │
+└─────────────────────────────────────┘   └─────────────────────────────────────┘
 ```
 
-### Data Model Additions
+### Componentes Específicos a Crear e Integrar
 
-- **HabitItem**:
-  - `id`: string
-  - `title`: string
-  - `category`: 'salud' | 'trabajo' | 'mindset' | 'rutina'
-  - `frequency`: 'daily' | 'weekdays'
-  - `completedDates`: string[] (formato `YYYY-MM-DD`)
-  - `streak`: number
-  - `createdAt`: string
-
-- **AI Analysis Response Schema**:
-  - `title`: string
-  - `description`: string
-  - `priority`: 'low' | 'medium' | 'high'
-  - `dueDate`: string (opcional)
-  - `subtasks`: string[]
-
-- **Spotlight Search Result**:
-  - `id`: string
-  - `type`: 'mail' | 'task' | 'calendar' | 'note'
-  - `title`: string
-  - `subtitle`: string
-  - `metadata`: string
-  - `onSelect`: () => void
+1. **`src/hooks/useIsMobile.ts`**:
+   - Hook reactivo ligero basado en `window.matchMedia('(max-width: 767px)')` con detección de cambio de orientación y soporte SSR seguro.
+2. **`src/components/OrionMobileNavBar.tsx`**:
+   - Barra de navegación inferior con los accesos directos y el disparador del panel de aplicaciones.
+3. **`src/components/OrionMobileAppDrawer.tsx`**:
+   - Hoja de aplicaciones deslizable (*Bottom Sheet Drawer*) con soporte para gestos táctiles de arrastre y fondo Liquid Glass.
+4. **Optimización Responsiva en `TasksKanbanView.tsx`**:
+   - Selector de columnas en móvil con pestañas táctiles horizontales.
+5. **Optimización Responsiva en `OrionMailApp.tsx` y `OrionDriveApp.tsx`**:
+   - Ajuste de cabeceras, botones de acción flotantes para móvil (*Floating Action Button / FAB*) y adaptación de tablas a filas táctiles.
+6. **Optimización en `OrionAuthenticatorApp.tsx`**:
+   - Reubicación del teclado numérico y ajuste de modales de seguridad como láminas inferiores.
