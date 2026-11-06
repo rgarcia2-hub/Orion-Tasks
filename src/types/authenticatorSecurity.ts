@@ -25,6 +25,10 @@ export interface AuthenticatorSecurityConfig {
   usedRecoveryCodes: string[];
   // Auto-lock configuration
   autoLockMinutes: number; // 0 = immediately on leave, 5, 15, 30
+  // End-To-End Encryption (E2EE) metadata
+  isE2EEEnabled?: boolean;
+  e2eeAlgorithm?: string;
+  e2eeUpdatedAt?: string;
   updatedAt: string;
 }
 

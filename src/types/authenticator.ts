@@ -13,6 +13,18 @@ export interface AuthenticatorToken {
   color?: string;
   folder?: string;
   isPinned?: boolean;
+  isE2EE?: boolean; // True if stored encrypted with AES-256-GCM
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EncryptedCloudToken {
+  id: string;
+  userId?: string;
+  isE2EE: true;
+  version: number;
+  ciphertext: string; // Base64 AES-256-GCM ciphertext
+  iv: string;         // Base64 96-bit initialization vector
   createdAt: string;
   updatedAt: string;
 }

@@ -24,6 +24,9 @@ import {
   hashPin,
   generateRecoveryCodes,
   registerPasskey,
+  deriveVaultMasterKey,
+  setActiveVaultKey,
+  saveDeviceVaultKey,
 } from '../../utils/securityCrypto';
 
 interface AuthenticatorSetupWizardProps {
@@ -172,6 +175,18 @@ export const AuthenticatorSetupWizard: React.FC<AuthenticatorSetupWizardProps> =
     if (enabledMethods.pin && pin) {
       pinSalt = generateSalt(16);
       pinHash = await hashPin(pin, pinSalt);
+    } else {
+      pinSalt = generateSalt(16);
+    }
+
+    try {
+      // Derive 256-bit AES-GCM master encryption key client-side (Zero-Knowledge)
+      const seed = pin || (recoveryCodes && recoveryCodes[0]) || 'orion-vault-master';
+      const vaultKey = await deriveVaultMasterKey(seed, pinSalt);
+      setActiveVaultKey(vaultKey);
+      await saveDeviceVaultKey(vaultKey);
+    } catch (kErr) {
+      console.warn('Could not derive E2EE master key in wizard:', kErr);
     }
 
     const finalConfig: AuthenticatorSecurityConfig = {
@@ -188,6 +203,9 @@ export const AuthenticatorSetupWizard: React.FC<AuthenticatorSetupWizardProps> =
       recoveryCodes,
       usedRecoveryCodes: [],
       autoLockMinutes: 5,
+      isE2EEEnabled: true,
+      e2eeAlgorithm: 'AES-256-GCM',
+      e2eeUpdatedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 

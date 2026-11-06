@@ -16,6 +16,11 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { AppTask, AppNote } from '../types/calendar';
 import { AuthenticatorToken } from '../types/authenticator';
 import { AuthenticatorSecurityConfig } from '../types/authenticatorSecurity';
+import {
+  encryptTokenE2EE,
+  decryptTokenE2EE,
+  getActiveVaultKey,
+} from '../utils/securityCrypto';
 
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
@@ -390,43 +395,92 @@ export function sanitizeAuthenticatorTokenForFirestore(
 /**
  * Real-time listener for user's Authenticator 2FA tokens.
  * Automatically synchronizes across all devices signed in with the same account.
+ * Decrypts E2EE tokens client-side using the unlocked vault master key.
  */
 export function subscribeToUserAuthenticatorTokens(
   userId: string,
   onTokensReceived: (tokens: AuthenticatorToken[]) => void,
-  onError?: (err: Error) => void
+  onError?: (err: Error) => void,
+  vaultKey?: CryptoKey | null
 ): Unsubscribe {
   const collectionPath = `users/${userId}/authenticator_tokens`;
   const tokensRef = collection(db, 'users', userId, 'authenticator_tokens');
 
   return onSnapshot(
     tokensRef,
-    (snapshot) => {
+    async (snapshot) => {
+      const activeKey = vaultKey || getActiveVaultKey();
       const tokensList: AuthenticatorToken[] = [];
-      snapshot.forEach((docSnap) => {
+
+      for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
-        tokensList.push({
-          id: docSnap.id,
-          userId,
-          issuer: data.issuer || 'Servicio',
-          account: data.account || '',
-          secret: data.secret || '',
-          algorithm: data.algorithm || 'SHA1',
-          digits: data.digits || 6,
-          period: data.period || 30,
-          icon: data.icon || 'shield',
-          color: data.color || '#7C3AED',
-          folder: data.folder || 'General',
-          isPinned: Boolean(data.isPinned),
-          createdAt: data.createdAt || new Date().toISOString(),
-          updatedAt: data.updatedAt || new Date().toISOString(),
-        });
-      });
+        if (data.isE2EE && data.ciphertext && data.iv) {
+          if (activeKey) {
+            try {
+              const decrypted = await decryptTokenE2EE(data, activeKey);
+              tokensList.push(decrypted);
+            } catch (decErr) {
+              console.warn('Could not decrypt token with active key:', decErr);
+              tokensList.push({
+                id: docSnap.id,
+                userId,
+                issuer: 'Token Cifrado E2EE',
+                account: '••••••••',
+                secret: '',
+                isE2EE: true,
+                createdAt: data.createdAt || new Date().toISOString(),
+                updatedAt: data.updatedAt || new Date().toISOString(),
+              });
+            }
+          } else {
+            // Vault locked or key not loaded yet: provide protected placeholder
+            tokensList.push({
+              id: docSnap.id,
+              userId,
+              issuer: 'Token Cifrado E2EE',
+              account: '••••••••',
+              secret: '',
+              isE2EE: true,
+              createdAt: data.createdAt || new Date().toISOString(),
+              updatedAt: data.updatedAt || new Date().toISOString(),
+            });
+          }
+        } else {
+          // Legacy unencrypted token
+          const legacyToken: AuthenticatorToken = {
+            id: docSnap.id,
+            userId,
+            issuer: data.issuer || 'Servicio',
+            account: data.account || '',
+            secret: data.secret || '',
+            algorithm: data.algorithm || 'SHA1',
+            digits: data.digits || 6,
+            period: data.period || 30,
+            icon: data.icon || 'shield',
+            color: data.color || '#7C3AED',
+            folder: data.folder || 'General',
+            isPinned: Boolean(data.isPinned),
+            isE2EE: false,
+            createdAt: data.createdAt || new Date().toISOString(),
+            updatedAt: data.updatedAt || new Date().toISOString(),
+          };
+          tokensList.push(legacyToken);
+
+          // Silently upgrade legacy token to zero-knowledge E2EE in cloud if key is active
+          if (activeKey && data.secret) {
+            encryptTokenE2EE(legacyToken, activeKey).then((encryptedCloud) => {
+              setDoc(doc(db, 'users', userId, 'authenticator_tokens', legacyToken.id), encryptedCloud).catch(() => {});
+            });
+          }
+        }
+      }
+
       // Sort pinned first, then by issuer/createdAt
       tokensList.sort((a, b) => {
         if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
         return a.issuer.localeCompare(b.issuer);
       });
+
       onTokensReceived(tokensList);
     },
     (err) => {
@@ -439,14 +493,22 @@ export function subscribeToUserAuthenticatorTokens(
 
 /**
  * Saves or updates a single Authenticator 2FA token to user's Firestore cloud database.
+ * Encrypts payload with AES-256-GCM before writing to the cloud.
  */
 export async function saveAuthenticatorTokenToFirestore(
   userId: string,
-  token: AuthenticatorToken
+  token: AuthenticatorToken,
+  vaultKey?: CryptoKey | null
 ): Promise<void> {
   const path = `users/${userId}/authenticator_tokens/${token.id}`;
+  const activeKey = vaultKey || getActiveVaultKey();
   try {
-    const payload = sanitizeAuthenticatorTokenForFirestore(token, userId);
+    let payload: Record<string, any>;
+    if (activeKey) {
+      payload = await encryptTokenE2EE(token, activeKey);
+    } else {
+      payload = sanitizeAuthenticatorTokenForFirestore(token, userId);
+    }
     await setDoc(doc(db, 'users', userId, 'authenticator_tokens', token.id), payload);
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
@@ -455,19 +517,27 @@ export async function saveAuthenticatorTokenToFirestore(
 
 /**
  * Batch saves multiple tokens (e.g. during backup restore or initial migration).
+ * Enforces AES-256-GCM client-side encryption.
  */
 export async function batchSaveAuthenticatorTokensToFirestore(
   userId: string,
-  tokens: AuthenticatorToken[]
+  tokens: AuthenticatorToken[],
+  vaultKey?: CryptoKey | null
 ): Promise<void> {
   const path = `users/${userId}/authenticator_tokens`;
+  const activeKey = vaultKey || getActiveVaultKey();
   try {
     const batch = writeBatch(db);
-    tokens.forEach((token) => {
+    for (const token of tokens) {
       const docRef = doc(db, 'users', userId, 'authenticator_tokens', token.id);
-      const payload = sanitizeAuthenticatorTokenForFirestore(token, userId);
+      let payload: Record<string, any>;
+      if (activeKey) {
+        payload = await encryptTokenE2EE(token, activeKey);
+      } else {
+        payload = sanitizeAuthenticatorTokenForFirestore(token, userId);
+      }
       batch.set(docRef, payload);
-    });
+    }
     await batch.commit();
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
@@ -490,7 +560,7 @@ export async function deleteAuthenticatorTokenFromFirestore(
 }
 
 /**
- * Saves Orion Authenticator security configuration (encrypted PIN hash, passkey, SMS, Email).
+ * Saves Orion Authenticator security configuration (encrypted PIN hash, passkey, SMS, Email, E2EE).
  */
 export async function saveAuthenticatorSecuritySettings(
   userId: string,
@@ -512,6 +582,9 @@ export async function saveAuthenticatorSecuritySettings(
       recoveryCodes: Array.isArray(config.recoveryCodes) ? config.recoveryCodes : [],
       usedRecoveryCodes: Array.isArray(config.usedRecoveryCodes) ? config.usedRecoveryCodes : [],
       autoLockMinutes: typeof config.autoLockMinutes === 'number' ? config.autoLockMinutes : 5,
+      isE2EEEnabled: config.isE2EEEnabled ?? true,
+      e2eeAlgorithm: config.e2eeAlgorithm || 'AES-256-GCM',
+      e2eeUpdatedAt: config.e2eeUpdatedAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     await setDoc(doc(db, 'users', userId, 'authenticator_settings', 'security'), payload);
@@ -550,6 +623,9 @@ export function subscribeToAuthenticatorSecuritySettings(
           recoveryCodes: data.recoveryCodes || [],
           usedRecoveryCodes: data.usedRecoveryCodes || [],
           autoLockMinutes: typeof data.autoLockMinutes === 'number' ? data.autoLockMinutes : 5,
+          isE2EEEnabled: data.isE2EEEnabled !== false,
+          e2eeAlgorithm: data.e2eeAlgorithm || 'AES-256-GCM',
+          e2eeUpdatedAt: data.e2eeUpdatedAt,
           updatedAt: data.updatedAt || new Date().toISOString(),
         });
       } else {
